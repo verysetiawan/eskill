@@ -1,0 +1,35 @@
+# Dependency folders
+node_modules/
+
+# Build outputs
+dist/
+build/
+coverage/
+esuk-server
+esuk-server-*
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# Runtime data
+local-data/
+uploads/*
+!uploads/logos/
+!uploads/logos/**
+
+# Logs and OS files
+*.log
+.DS_Store
+
+# Temporary helper scripts from development sessions
+fix*.cjs
+repair*.cjs
+script-update-competency.cjs
+
+# Legacy/unused deployment artifacts
+metadata.json
+vercel.json
+server.ts

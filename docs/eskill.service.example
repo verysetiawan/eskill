@@ -1,0 +1,16 @@
+[Unit]
+Description=ESKILL Passport
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/eskill
+EnvironmentFile=/etc/eskill/eskill.env
+ExecStart=/opt/eskill/esuk-server
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
