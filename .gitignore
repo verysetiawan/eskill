@@ -19,7 +19,7 @@ local-data/
 uploads/*
 !uploads/logos/
 !uploads/logos/**
-backups/
+#backups/
 
 # Logs and OS files
 *.log
