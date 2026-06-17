@@ -73,11 +73,11 @@ Jika upload gambar gagal dengan pesan `permission denied`, perbaiki izin folder 
 
 ```bash
 sudo mkdir -p uploads/logos
-sudo chown -R 100:101 uploads
+sudo chmod -R a+rwX uploads
 docker compose --env-file .env.docker up -d --build
 ```
 
-Container juga otomatis mencoba memperbaiki izin folder upload saat start.
+Container juga otomatis mencoba memperbaiki izin folder upload saat start. Jika masih gagal, pastikan server sudah `git pull` dan container sudah di-build ulang.
 
 ## 4. Restore Database dari Backup
 

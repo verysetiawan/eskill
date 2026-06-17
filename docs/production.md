@@ -91,7 +91,7 @@ Jika fitur unggah logo/gambar menampilkan pesan `permission denied`, jalankan:
 
 ```bash
 sudo mkdir -p uploads/logos
-sudo chown -R 100:101 uploads
+sudo chmod -R a+rwX uploads
 docker compose --env-file .env.docker up -d --build
 ```
 
