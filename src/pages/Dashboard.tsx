@@ -178,6 +178,15 @@ const getDepartmentAbbreviation = (name: string) => {
     .toUpperCase() || 'KONLI';
 };
 
+const getClassOptionsForDepartment = (departmentName: string) => {
+  const abbreviation = getDepartmentAbbreviation(departmentName || '');
+  if (!departmentName || !abbreviation) return [];
+
+  const levels = ['X', 'XI', 'XII'];
+  const roomNumbers = ['1', '2', '3'];
+  return levels.flatMap(level => roomNumbers.map(room => `${level} ${abbreviation} ${room}`));
+};
+
 const getDocumentSerial = (student: Student) => {
   const schoolNumber = (student['Nomor Surat'] || '').trim();
   if (schoolNumber) {
@@ -1061,7 +1070,7 @@ export default function Dashboard() {
       const headers = ['Nama Siswa', 'NISN', 'NIS', 'Jurusan', 'Kelas', 'Angkatan', 'Penguji', 'NIP/Reg Met Penguji'];
       const departmentNames = Object.keys(settings.departments);
       const exampleDepartment = departmentNames[0] || 'Teknik Komputer dan Jaringan';
-      const exampleClass = `XII ${getDepartmentAbbreviation(exampleDepartment)} 1`;
+      const exampleClass = `X ${getDepartmentAbbreviation(exampleDepartment)} 1`;
       const worksheet = XLSX.utils.aoa_to_sheet([
         headers,
         ['CONTOH NAMA SISWA', '0012345678', '1234/5678', exampleDepartment, exampleClass, new Date().getFullYear().toString(), 'Nama Penguji', 'NIP atau Reg Met']
@@ -1073,7 +1082,7 @@ export default function Dashboard() {
       }];
       worksheet['E1'].c = [{
         a: 'ESKILL',
-        t: 'Format kelas: XII [SINGKATAN JURUSAN] [NOMOR KELAS]. Contoh: XII TKJ 1, XII TKR 2, XII KL 1.'
+        t: 'Format kelas: [TINGKAT] [SINGKATAN JURUSAN] [NOMOR KELAS]. Tingkat bisa X, XI, atau XII. Contoh: X TKJ 1, XI TKR 2, XII KL 1.'
       }];
       worksheet['!cols'] = [
         { wch: 28 }, { wch: 16 }, { wch: 18 }, { wch: 38 },
@@ -1085,14 +1094,15 @@ export default function Dashboard() {
         [],
         ['Kolom', 'Ketentuan'],
         ['Jurusan', 'Harus ditulis persis sama dengan nama pada menu Data Jurusan.'],
-        ['Kelas', 'Gunakan format XII [singkatan jurusan] [nomor kelas], contoh XII TKJ 1.'],
+        ['Kelas', 'Gunakan format [tingkat] [singkatan jurusan] [nomor kelas], contoh X TKJ 1, XI TKJ 2, atau XII TKJ 3.'],
         ['Penguji', 'Tuliskan nama penguji sesuai Data Jurusan.'],
         ['NIP/Reg Met Penguji', 'Boleh diisi NIP atau nomor Reg Met penguji.'],
         [],
         ['Nama Jurusan', 'Contoh Penulisan Kelas']
       ];
       departmentNames.forEach(name => {
-        guideRows.push([name, `XII ${getDepartmentAbbreviation(name)} 1`]);
+        const abbreviation = getDepartmentAbbreviation(name);
+        guideRows.push([name, `X ${abbreviation} 1 / XI ${abbreviation} 1 / XII ${abbreviation} 1`]);
       });
       const guideSheet = XLSX.utils.aoa_to_sheet(guideRows);
       guideSheet['!cols'] = [{ wch: 42 }, { wch: 72 }];
@@ -4591,16 +4601,7 @@ export default function Dashboard() {
                           <option value="">-- Pilih Kelas --</option>
                           {(() => {
                               const dept = editingStudent ? editingStudent.Jurusan : newStudent.Jurusan;
-                              const d = (dept || '').toLowerCase();
-                              let classes: string[] = [];
-                              if (d.includes('komputer') || d.includes('tkj')) classes = ['XII TKJ 1', 'XII TKJ 2', 'XII TKJ 3'];
-                              else if (d.includes('kendaraan') || d.includes('tkr')) classes = ['XII TKR 1', 'XII TKR 2', 'XII TKR 3'];
-                              else if (d.includes('elektronika') || d.includes('tei')) classes = ['XII TEI 1', 'XII TEI 2', 'XII TEI 3'];
-                              else if (d.includes('sepeda') || d.includes('tsm')) classes = ['XII TSM 1', 'XII TSM 2', 'XII TSM 3'];
-                              else if (d.includes('kuliner')) classes = ['XII KL 1', 'XII KL 2', 'XII KL 3'];
-                              else if (d.includes('bisnis') || d.includes('daring') || d.includes('pemasaran')) classes = ['XII BDMP 1', 'XII BDMP 2', 'XII BDMP 3'];
-                              else if (d.includes('akuntansi')) classes = ['XII AKL 1', 'XII AKL 2', 'XII AKL 3'];
-                              else classes = ['Kelas 1', 'Kelas 2', 'Kelas 3'];
+                              const classes = getClassOptionsForDepartment(dept || '');
                               
                               return classes.map(c => <option key={c} value={c}>{c}</option>);
                           })()}

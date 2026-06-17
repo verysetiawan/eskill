@@ -1715,8 +1715,8 @@ func handleDownloadTemplate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows := [][]interface{}{
-		{"ABID NUGROHO", "0068742533", "7377/1700.066", "Teknik Komputer dan Jaringan", "XII TKJ 1", "2026", "Budi Santoso, S.Kom.", "198001012005011001"},
-		{"SITI NURHALIZA", "0056784455", "7378/1701.066", "Kuliner", "XII KL 2", "2026", "Dra. Siti Aminah", "REG-MET-001"},
+		{"ABID NUGROHO", "0068742533", "7377/1700.066", "Teknik Komputer dan Jaringan", "X TKJ 1", "2026", "Budi Santoso, S.Kom.", "198001012005011001"},
+		{"SITI NURHALIZA", "0056784455", "7378/1701.066", "Kuliner", "XI KL 2", "2026", "Dra. Siti Aminah", "REG-MET-001"},
 	}
 
 	for rIdx, r := range rows {
