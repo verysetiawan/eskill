@@ -2774,10 +2774,10 @@ func renderSkillPassportPDF(pdf *gopdf.GoPdf, student map[string]interface{}, se
 	drawTextCenteredInArea(pdf, fmt.Sprintf("%s, %s", dateCity, settings.Date), "Helvetica-Bold", 10.5, signY, rightX, signatureColumnWidth, 0, 0, 0)
 	drawTextCenteredInArea(pdf, "Mengetahui,", "Helvetica-Bold", 11.5, signY+132, leftX, signatureColumnWidth, 0, 0, 0)
 	if isLSP {
-		drawSignatureBlock(pdf, "Manajer Sertifikasi", settings.CertificationManager, settings.CertificationManagerNip, "NIP.", leftX, signatureColumnWidth, signY+18)
+		drawSignatureBlock(pdf, "Manajer Sertifikasi", settings.CertificationManager, "", "", leftX, signatureColumnWidth, signY+18)
 		drawSignatureBlock(pdf, "Asesor", examinerName, examinerNip, "Reg MET.", rightX, signatureColumnWidth, signY+18)
 		drawSignatureBlock(pdf, "Kepala Sekolah", settings.Signatory, settings.SignatoryNip, "NIP.", leftX, signatureColumnWidth, signY+147)
-		drawSignatureBlock(pdf, "Direktur LSP", settings.LspDirector, settings.LspDirectorNip, "NIP.", rightX, signatureColumnWidth, signY+147)
+		drawSignatureBlock(pdf, "Direktur LSP", settings.LspDirector, "", "", rightX, signatureColumnWidth, signY+147)
 	} else {
 		drawSignatureBlock(pdf, fmt.Sprintf("Kakonli %s", departmentCode), kakonliName, kakonliNip, "NIP.", leftX, signatureColumnWidth, signY+18)
 		drawSignatureBlock(pdf, "Penguji", examinerName, examinerNip, "NIP.", rightX, signatureColumnWidth, signY+18)
@@ -2876,11 +2876,11 @@ func renderLSPSchemePDF(pdf *gopdf.GoPdf, student map[string]interface{}, settin
 	signY := currentY + 28
 	examinerName, examinerRegMet := resolveInternalExaminer(student, jurusanName, settings)
 	drawTextCenteredInArea(pdf, fmt.Sprintf("%s, %s", strings.TrimSpace(settings.City), settings.Date), "Helvetica-Bold", 10.5, signY, rightX, columnWidth, 0, 0, 0)
-	drawSignatureBlock(pdf, "Manajer Sertifikasi", settings.CertificationManager, settings.CertificationManagerNip, "NIP.", leftX, columnWidth, signY+18)
+	drawSignatureBlock(pdf, "Manajer Sertifikasi", settings.CertificationManager, "", "", leftX, columnWidth, signY+18)
 	drawSignatureBlock(pdf, "Asesor", examinerName, examinerRegMet, "Reg MET.", rightX, columnWidth, signY+18)
 	drawTextCenteredInArea(pdf, "Mengetahui,", "Helvetica-Bold", 11.5, signY+132, leftX, columnWidth, 0, 0, 0)
 	drawSignatureBlock(pdf, "Kepala Sekolah", settings.Signatory, settings.SignatoryNip, "NIP.", leftX, columnWidth, signY+147)
-	drawSignatureBlock(pdf, "Direktur LSP", settings.LspDirector, settings.LspDirectorNip, "NIP.", rightX, columnWidth, signY+147)
+	drawSignatureBlock(pdf, "Direktur LSP", settings.LspDirector, "", "", rightX, columnWidth, signY+147)
 }
 
 func resolveLSPDepartmentIdentity(jurusanName string, settings CertSettings) (string, string, string, string, string, string) {
@@ -2985,6 +2985,10 @@ func drawSignatureBlock(pdf *gopdf.GoPdf, title, name, identifier, identifierLab
 	}
 	drawTextCenteredInArea(pdf, name, "Helvetica-Bold", 11.5, y+64, x, width, 0, 0, 0)
 	identifier = strings.TrimSpace(identifier)
+	identifierLabel = strings.TrimSpace(identifierLabel)
+	if identifierLabel == "" {
+		return
+	}
 	if identifier == "" {
 		identifier = "-"
 	}

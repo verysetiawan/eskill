@@ -2249,7 +2249,6 @@ export default function Dashboard() {
                     <h4 className="text-sm font-bold text-primary mb-4">Direktur LSP</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       <Input label="Nama Direktur LSP" value={settings.school.lspDirector || ''} onChange={(v) => setSettings({...settings, school: {...settings.school, lspDirector: v}})} />
-                      <Input label="NIP Direktur LSP" value={settings.school.lspDirectorNip || ''} onChange={(v) => setSettings({...settings, school: {...settings.school, lspDirectorNip: v}})} />
                     </div>
                   </section>
 
@@ -2257,7 +2256,6 @@ export default function Dashboard() {
                     <h4 className="text-sm font-bold text-primary mb-4">Manajer Sertifikasi</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       <Input label="Nama Manajer Sertifikasi" value={settings.school.certificationManager || ''} onChange={(v) => setSettings({...settings, school: {...settings.school, certificationManager: v}})} />
-                      <Input label="NIP Manajer Sertifikasi" value={settings.school.certificationManagerNip || ''} onChange={(v) => setSettings({...settings, school: {...settings.school, certificationManagerNip: v}})} />
                     </div>
                   </section>
 
@@ -3766,7 +3764,7 @@ export default function Dashboard() {
                                        <p>{isLSPPreview ? 'Manajer Sertifikasi' : `Kakonli ${acronym}`}</p>
                                        <div className="h-8" />
                                        <p>{isLSPPreview ? (settings.school.certificationManager || '-') : (department?.competencyHeadName || '-')}</p>
-                                       <p>NIP. {isLSPPreview ? (settings.school.certificationManagerNip || '-') : (department?.competencyHeadNip || '-')}</p>
+                                       {!isLSPPreview && <p>NIP. {department?.competencyHeadNip || '-'}</p>}
                                      </div>
                                      <div className="text-center">
                                        <p>{settings.school.city || '-'}, {settings.school.date || '-'}</p>
@@ -3787,7 +3785,7 @@ export default function Dashboard() {
                                        <p>{isLSPPreview ? 'Direktur LSP' : 'Waka Kurikulum'}</p>
                                        <div className="h-8" />
                                        <p>{isLSPPreview ? (settings.school.lspDirector || '-') : (settings.school.vicePrincipalCurriculum || '-')}</p>
-                                       <p>NIP. {isLSPPreview ? (settings.school.lspDirectorNip || '-') : (settings.school.vicePrincipalCurriculumNip || '-')}</p>
+                                       {!isLSPPreview && <p>NIP. {settings.school.vicePrincipalCurriculumNip || '-'}</p>}
                                      </div>
                                    </div>
                                  </div>
