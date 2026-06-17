@@ -69,12 +69,16 @@ const INITIAL_SETTINGS: AppSettings = {
     signatory: 'A. ROFIQ GHOZALI, S.Pt.',
     signatoryRank: 'Penata Tingkat I',
     signatoryNip: '198206122009011011',
+    signatorySignature: '',
     vicePrincipalCurriculum: '',
     vicePrincipalCurriculumNip: '',
+    vicePrincipalCurriculumSignature: '',
     lspDirector: '',
     lspDirectorNip: '',
+    lspDirectorSignature: '',
     certificationManager: '',
-    certificationManagerNip: ''
+    certificationManagerNip: '',
+    certificationManagerSignature: ''
   },
   industries: {
     'default': {
@@ -1299,14 +1303,21 @@ export default function Dashboard() {
     }
   };
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'school' | 'province' | 'lsp' | 'bnsp' | 'industry' | 'ministry' | 'department', id?: string) => {
+  type UploadAssetType =
+    | 'school' | 'province' | 'lsp' | 'bnsp' | 'industry' | 'ministry' | 'department'
+    | 'principalSignature' | 'vicePrincipalSignature' | 'lspDirectorSignature' | 'certificationManagerSignature'
+    | 'competencyHeadSignature' | 'examinerSignature';
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: UploadAssetType, id?: string) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setIsLoading(true);
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `logos/${type}_${id || 'default'}_${Date.now()}.${fileExt}`;
+      const uploadFolder = type.toLowerCase().includes('signature') ? 'signatures' : 'logos';
+      const safeId = (id || 'default').replace(/[^a-zA-Z0-9_-]/g, '_');
+      const fileName = `${uploadFolder}/${type}_${safeId}_${Date.now()}.${fileExt}`;
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('app-assets')
@@ -1345,14 +1356,45 @@ export default function Dashboard() {
             [id]: { ...settings.departments[id], logo: publicUrl }
           }
         };
+      } else if (type === 'principalSignature') {
+        newSettings = { ...settings, school: { ...settings.school, signatorySignature: publicUrl } };
+      } else if (type === 'vicePrincipalSignature') {
+        newSettings = { ...settings, school: { ...settings.school, vicePrincipalCurriculumSignature: publicUrl } };
+      } else if (type === 'lspDirectorSignature') {
+        newSettings = { ...settings, school: { ...settings.school, lspDirectorSignature: publicUrl } };
+      } else if (type === 'certificationManagerSignature') {
+        newSettings = { ...settings, school: { ...settings.school, certificationManagerSignature: publicUrl } };
+      } else if (type === 'competencyHeadSignature' && id) {
+        newSettings = {
+          ...settings,
+          departments: {
+            ...settings.departments,
+            [id]: { ...settings.departments[id], competencyHeadSignature: publicUrl }
+          }
+        };
+      } else if (type === 'examinerSignature' && id) {
+        const [deptId, examinerIndex] = id.split('::');
+        const idx = Number(examinerIndex);
+        const currentDept = settings.departments[deptId];
+        if (currentDept && Number.isInteger(idx) && idx >= 0) {
+          const internalExaminers = [...(currentDept.internalExaminers || [])];
+          internalExaminers[idx] = { ...(internalExaminers[idx] || { name: '', nip: '' }), signature: publicUrl };
+          newSettings = {
+            ...settings,
+            departments: {
+              ...settings.departments,
+              [deptId]: { ...currentDept, internalExaminers }
+            }
+          };
+        }
       }
       
       setSettings(newSettings);
       const syncSuccess = await saveSettingsToSupabase(newSettings);
       if (syncSuccess) {
-        setNotification({ message: 'Logo berhasil diperbarui & disimpan', type: 'success' });
+        setNotification({ message: 'Gambar berhasil diperbarui & disimpan', type: 'success' });
       } else {
-        setNotification({ message: 'Logo berhasil diperbarui. Database lokal belum aktif, jadi pengaturan disimpan di server lokal.', type: 'success' });
+        setNotification({ message: 'Gambar berhasil diperbarui. Database lokal belum aktif, jadi pengaturan disimpan di server lokal.', type: 'success' });
       }
     } catch (err: any) {
       console.error('Upload error:', err);
@@ -1362,6 +1404,39 @@ export default function Dashboard() {
       e.target.value = '';
     }
   };
+
+  const renderSignatureUploader = (
+    title: string,
+    value: string | undefined,
+    uploadType: UploadAssetType,
+    id?: string,
+    onClear?: () => void
+  ) => (
+    <div className="flex items-center gap-4 rounded-xl border border-border bg-app-bg/30 p-3">
+      <div className="w-24 h-16 bg-white border border-border rounded-lg flex items-center justify-center overflow-hidden relative group shrink-0">
+        {value ? (
+          <img src={value} alt={title} className="w-full h-full object-contain p-1" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+        ) : <ImageIcon className="text-text-muted opacity-20" size={22} />}
+        <label className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer text-white text-[9px] font-bold uppercase">
+          Unggah
+          <input type="file" className="hidden" accept="image/*" onChange={(e) => handleLogoUpload(e, uploadType, id)} />
+        </label>
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-bold text-primary">{title}</p>
+        <p className="text-[10px] text-text-muted mt-1">Kosong berarti tanda tangan tidak ditampilkan.</p>
+        {value && onClear && (
+          <button
+            type="button"
+            onClick={onClear}
+            className="mt-2 text-[10px] font-bold text-red-500 hover:text-red-600 underline underline-offset-2"
+          >
+            Hapus scan
+          </button>
+        )}
+      </div>
+    </div>
+  );
 
   const generatePDF = async (student: Student, certificateType: 'ukk' | 'lsp' = 'ukk') => {
     try {
@@ -2152,6 +2227,22 @@ export default function Dashboard() {
                     <Input label="Nama Waka Kurikulum" value={settings.school.vicePrincipalCurriculum || ''} onChange={(v) => setSettings({...settings, school: {...settings.school, vicePrincipalCurriculum: v}})} />
                     <Input label="NIP Waka Kurikulum" value={settings.school.vicePrincipalCurriculumNip || ''} onChange={(v) => setSettings({...settings, school: {...settings.school, vicePrincipalCurriculumNip: v}})} />
                   </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {renderSignatureUploader(
+                      'Scan TTD Kepala Sekolah',
+                      settings.school.signatorySignature,
+                      'principalSignature',
+                      undefined,
+                      () => setSettings({...settings, school: {...settings.school, signatorySignature: ''}})
+                    )}
+                    {renderSignatureUploader(
+                      'Scan TTD Waka Kurikulum',
+                      settings.school.vicePrincipalCurriculumSignature,
+                      'vicePrincipalSignature',
+                      undefined,
+                      () => setSettings({...settings, school: {...settings.school, vicePrincipalCurriculumSignature: ''}})
+                    )}
+                  </div>
                   <div className="pt-4">
                     <button 
                       onClick={async () => {
@@ -2249,6 +2340,13 @@ export default function Dashboard() {
                     <h4 className="text-sm font-bold text-primary mb-4">Direktur LSP</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       <Input label="Nama Direktur LSP" value={settings.school.lspDirector || ''} onChange={(v) => setSettings({...settings, school: {...settings.school, lspDirector: v}})} />
+                      {renderSignatureUploader(
+                        'Scan TTD Direktur LSP',
+                        settings.school.lspDirectorSignature,
+                        'lspDirectorSignature',
+                        undefined,
+                        () => setSettings({...settings, school: {...settings.school, lspDirectorSignature: ''}})
+                      )}
                     </div>
                   </section>
 
@@ -2256,6 +2354,13 @@ export default function Dashboard() {
                     <h4 className="text-sm font-bold text-primary mb-4">Manajer Sertifikasi</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       <Input label="Nama Manajer Sertifikasi" value={settings.school.certificationManager || ''} onChange={(v) => setSettings({...settings, school: {...settings.school, certificationManager: v}})} />
+                      {renderSignatureUploader(
+                        'Scan TTD Manajer Sertifikasi',
+                        settings.school.certificationManagerSignature,
+                        'certificationManagerSignature',
+                        undefined,
+                        () => setSettings({...settings, school: {...settings.school, certificationManagerSignature: ''}})
+                      )}
                     </div>
                   </section>
 
@@ -2850,6 +2955,17 @@ export default function Dashboard() {
                                 setSettings({ ...settings, departments: newDepts });
                               }}
                             />
+                            {renderSignatureUploader(
+                              'Scan TTD Kakonli',
+                              settings.departments[editingDept].competencyHeadSignature,
+                              'competencyHeadSignature',
+                              editingDept,
+                              () => {
+                                const newDepts = { ...settings.departments };
+                                newDepts[editingDept].competencyHeadSignature = '';
+                                setSettings({ ...settings, departments: newDepts });
+                              }
+                            )}
                          </div>
                       </div>
 
@@ -2993,6 +3109,7 @@ export default function Dashboard() {
                                <tr>
                                  <th className="px-4 py-3 font-bold text-[10px] uppercase tracking-wider text-text-muted">Nama Penguji</th>
                                  <th className="px-4 py-3 font-bold text-[10px] uppercase tracking-wider text-text-muted">NIP/Reg Met Penguji</th>
+                                 <th className="px-4 py-3 font-bold text-[10px] uppercase tracking-wider text-text-muted">Scan TTD</th>
                                  <th className="px-4 py-3 w-12"></th>
                                </tr>
                              </thead>
@@ -3027,6 +3144,20 @@ export default function Dashboard() {
                                        className="w-full bg-transparent border-none focus:ring-1 focus:ring-primary rounded px-2 py-1 font-mono font-medium"
                                      />
                                    </td>
+                                   <td className="px-4 py-2">
+                                     {renderSignatureUploader(
+                                       'TTD Penguji/Asesor',
+                                       ex.signature,
+                                       'examinerSignature',
+                                       `${editingDept}::${eIdx}`,
+                                       () => {
+                                          const newDepts = { ...settings.departments };
+                                          if (!newDepts[editingDept].internalExaminers) newDepts[editingDept].internalExaminers = [];
+                                          newDepts[editingDept].internalExaminers[eIdx].signature = '';
+                                          setSettings({ ...settings, departments: newDepts });
+                                       }
+                                     )}
+                                   </td>
                                    <td className="px-4 py-2 text-right">
                                      <button 
                                        onClick={() => {
@@ -3043,7 +3174,7 @@ export default function Dashboard() {
                                ))}
                                {!settings.departments[editingDept].internalExaminers || settings.departments[editingDept].internalExaminers.length === 0 && (
                                  <tr>
-                                   <td colSpan={3} className="px-4 py-12 text-center">
+                                   <td colSpan={4} className="px-4 py-12 text-center">
                                       <p className="text-text-muted text-xs font-medium italic">Belum ada penguji internal yang ditambahkan.</p>
                                       <button 
                                         onClick={() => {
@@ -3762,28 +3893,40 @@ export default function Dashboard() {
                                    <div className="grid grid-cols-2 gap-x-16 gap-y-3 mt-2 text-[8px] font-bold">
                                      <div className="text-center">
                                        <p>{isLSPPreview ? 'Manajer Sertifikasi' : `Kakonli ${acronym}`}</p>
-                                       <div className="h-8" />
+                                       <div className="h-8 flex items-center justify-center">
+                                         {(isLSPPreview ? settings.school.certificationManagerSignature : department?.competencyHeadSignature) && (
+                                           <img src={isLSPPreview ? settings.school.certificationManagerSignature : department?.competencyHeadSignature} className="max-h-8 max-w-[90px] object-contain" />
+                                         )}
+                                       </div>
                                        <p>{isLSPPreview ? (settings.school.certificationManager || '-') : (department?.competencyHeadName || '-')}</p>
                                        {!isLSPPreview && <p>NIP. {department?.competencyHeadNip || '-'}</p>}
                                      </div>
                                      <div className="text-center">
                                        <p>{settings.school.city || '-'}, {settings.school.date || '-'}</p>
                                        <p>{isLSPPreview ? 'Asesor' : 'Penguji'}</p>
-                                       <div className="h-8" />
+                                       <div className="h-8 flex items-center justify-center">
+                                         {examiner?.signature && <img src={examiner.signature} className="max-h-8 max-w-[90px] object-contain" />}
+                                       </div>
                                        <p>{s['Penguji Internal'] || '-'}</p>
                                        <p>{isLSPPreview ? 'Reg MET.' : 'NIP.'} {s['NIP/Reg Met Penguji'] || examiner?.nip || '-'}</p>
                                      </div>
                                      <div className="text-center pt-5">
                                        <p>Mengetahui,</p>
                                        <p>Kepala Sekolah</p>
-                                       <div className="h-8" />
+                                       <div className="h-8 flex items-center justify-center">
+                                         {settings.school.signatorySignature && <img src={settings.school.signatorySignature} className="max-h-8 max-w-[90px] object-contain" />}
+                                       </div>
                                        <p>{settings.school.signatory || '-'}</p>
                                        <p>NIP. {settings.school.signatoryNip || '-'}</p>
                                      </div>
                                      <div className="text-center pt-5">
                                        <p className="invisible" aria-hidden="true">Mengetahui,</p>
                                        <p>{isLSPPreview ? 'Direktur LSP' : 'Waka Kurikulum'}</p>
-                                       <div className="h-8" />
+                                       <div className="h-8 flex items-center justify-center">
+                                         {(isLSPPreview ? settings.school.lspDirectorSignature : settings.school.vicePrincipalCurriculumSignature) && (
+                                           <img src={isLSPPreview ? settings.school.lspDirectorSignature : settings.school.vicePrincipalCurriculumSignature} className="max-h-8 max-w-[90px] object-contain" />
+                                         )}
+                                       </div>
                                        <p>{isLSPPreview ? (settings.school.lspDirector || '-') : (settings.school.vicePrincipalCurriculum || '-')}</p>
                                        {!isLSPPreview && <p>NIP. {settings.school.vicePrincipalCurriculumNip || '-'}</p>}
                                      </div>

@@ -18,6 +18,7 @@ export interface Student {
 export interface InternalExaminer {
   name: string;
   nip?: string;
+  signature?: string;
 }
 
 export interface Competency {
@@ -34,6 +35,7 @@ export interface DepartmentSettings {
   assignmentTitleEn?: string; // Legacy field
   competencyHeadName?: string;
   competencyHeadNip?: string;
+  competencyHeadSignature?: string;
   skillProgram?: string;
   skillConcentration?: string;
   expertiseField?: string;
@@ -84,12 +86,16 @@ export interface SchoolSettings {
   signatory: string;
   signatoryRank: string;
   signatoryNip: string;
+  signatorySignature?: string;
   vicePrincipalCurriculum?: string;
   vicePrincipalCurriculumNip?: string;
+  vicePrincipalCurriculumSignature?: string;
   lspDirector?: string;
   lspDirectorNip?: string;
+  lspDirectorSignature?: string;
   certificationManager?: string;
   certificationManagerNip?: string;
+  certificationManagerSignature?: string;
 }
 
 export interface CertificateLayout {

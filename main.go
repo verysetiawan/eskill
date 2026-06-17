@@ -1970,12 +1970,16 @@ type CertSettings struct {
 	Signatory                  string                 `json:"signatory"`
 	SignatoryRank              string                 `json:"signatoryRank"`
 	SignatoryNip               string                 `json:"signatoryNip"`
+	SignatorySignature         string                 `json:"signatorySignature"`
 	VicePrincipalCurriculum    string                 `json:"vicePrincipalCurriculum"`
 	VicePrincipalCurriculumNip string                 `json:"vicePrincipalCurriculumNip"`
+	VicePrincipalSignature     string                 `json:"vicePrincipalCurriculumSignature"`
 	LspDirector                string                 `json:"lspDirector"`
 	LspDirectorNip             string                 `json:"lspDirectorNip"`
+	LspDirectorSignature       string                 `json:"lspDirectorSignature"`
 	CertificationManager       string                 `json:"certificationManager"`
 	CertificationManagerNip    string                 `json:"certificationManagerNip"`
+	CertificationManagerSig    string                 `json:"certificationManagerSignature"`
 	SchoolLogo                 string                 `json:"schoolLogo"`
 	MinistryLogo               string                 `json:"ministryLogo"`
 	IndustryLogo               string                 `json:"industryLogo"`
@@ -2768,21 +2772,21 @@ func renderSkillPassportPDF(pdf *gopdf.GoPdf, student map[string]interface{}, se
 	signatureColumnWidth := (tableRightX - leftX) / 2
 	rightX := leftX + signatureColumnWidth
 	signY := currentY + 4
-	kakonliName, kakonliNip := resolveCompetencyHead(jurusanName, settings)
-	examinerName, examinerNip := resolveInternalExaminer(student, jurusanName, settings)
+	kakonliName, kakonliNip, kakonliSignature := resolveCompetencyHead(jurusanName, settings)
+	examinerName, examinerNip, examinerSignature := resolveInternalExaminer(student, jurusanName, settings)
 	departmentCode := departmentAbbreviation(jurusanName)
 	drawTextCenteredInArea(pdf, fmt.Sprintf("%s, %s", dateCity, settings.Date), "Helvetica-Bold", 10.5, signY, rightX, signatureColumnWidth, 0, 0, 0)
 	drawTextCenteredInArea(pdf, "Mengetahui,", "Helvetica-Bold", 11.5, signY+132, leftX, signatureColumnWidth, 0, 0, 0)
 	if isLSP {
-		drawSignatureBlock(pdf, "Manajer Sertifikasi", settings.CertificationManager, "", "", leftX, signatureColumnWidth, signY+18)
-		drawSignatureBlock(pdf, "Asesor", examinerName, examinerNip, "Reg MET.", rightX, signatureColumnWidth, signY+18)
-		drawSignatureBlock(pdf, "Kepala Sekolah", settings.Signatory, settings.SignatoryNip, "NIP.", leftX, signatureColumnWidth, signY+147)
-		drawSignatureBlock(pdf, "Direktur LSP", settings.LspDirector, "", "", rightX, signatureColumnWidth, signY+147)
+		drawSignatureBlockWithImage(pdf, "Manajer Sertifikasi", settings.CertificationManager, "", "", settings.CertificationManagerSig, leftX, signatureColumnWidth, signY+18)
+		drawSignatureBlockWithImage(pdf, "Asesor", examinerName, examinerNip, "Reg MET.", examinerSignature, rightX, signatureColumnWidth, signY+18)
+		drawSignatureBlockWithImage(pdf, "Kepala Sekolah", settings.Signatory, settings.SignatoryNip, "NIP.", settings.SignatorySignature, leftX, signatureColumnWidth, signY+147)
+		drawSignatureBlockWithImage(pdf, "Direktur LSP", settings.LspDirector, "", "", settings.LspDirectorSignature, rightX, signatureColumnWidth, signY+147)
 	} else {
-		drawSignatureBlock(pdf, fmt.Sprintf("Kakonli %s", departmentCode), kakonliName, kakonliNip, "NIP.", leftX, signatureColumnWidth, signY+18)
-		drawSignatureBlock(pdf, "Penguji", examinerName, examinerNip, "NIP.", rightX, signatureColumnWidth, signY+18)
-		drawSignatureBlock(pdf, "Kepala Sekolah", settings.Signatory, settings.SignatoryNip, "NIP.", leftX, signatureColumnWidth, signY+147)
-		drawSignatureBlock(pdf, "Waka Kurikulum", settings.VicePrincipalCurriculum, settings.VicePrincipalCurriculumNip, "NIP.", rightX, signatureColumnWidth, signY+147)
+		drawSignatureBlockWithImage(pdf, fmt.Sprintf("Kakonli %s", departmentCode), kakonliName, kakonliNip, "NIP.", kakonliSignature, leftX, signatureColumnWidth, signY+18)
+		drawSignatureBlockWithImage(pdf, "Penguji", examinerName, examinerNip, "NIP.", examinerSignature, rightX, signatureColumnWidth, signY+18)
+		drawSignatureBlockWithImage(pdf, "Kepala Sekolah", settings.Signatory, settings.SignatoryNip, "NIP.", settings.SignatorySignature, leftX, signatureColumnWidth, signY+147)
+		drawSignatureBlockWithImage(pdf, "Waka Kurikulum", settings.VicePrincipalCurriculum, settings.VicePrincipalCurriculumNip, "NIP.", settings.VicePrincipalSignature, rightX, signatureColumnWidth, signY+147)
 	}
 }
 
@@ -2874,13 +2878,13 @@ func renderLSPSchemePDF(pdf *gopdf.GoPdf, student map[string]interface{}, settin
 	columnWidth := (rightEdge - leftX) / 2
 	rightX := leftX + columnWidth
 	signY := currentY + 28
-	examinerName, examinerRegMet := resolveInternalExaminer(student, jurusanName, settings)
+	examinerName, examinerRegMet, examinerSignature := resolveInternalExaminer(student, jurusanName, settings)
 	drawTextCenteredInArea(pdf, fmt.Sprintf("%s, %s", strings.TrimSpace(settings.City), settings.Date), "Helvetica-Bold", 10.5, signY, rightX, columnWidth, 0, 0, 0)
-	drawSignatureBlock(pdf, "Manajer Sertifikasi", settings.CertificationManager, "", "", leftX, columnWidth, signY+18)
-	drawSignatureBlock(pdf, "Asesor", examinerName, examinerRegMet, "Reg MET.", rightX, columnWidth, signY+18)
+	drawSignatureBlockWithImage(pdf, "Manajer Sertifikasi", settings.CertificationManager, "", "", settings.CertificationManagerSig, leftX, columnWidth, signY+18)
+	drawSignatureBlockWithImage(pdf, "Asesor", examinerName, examinerRegMet, "Reg MET.", examinerSignature, rightX, columnWidth, signY+18)
 	drawTextCenteredInArea(pdf, "Mengetahui,", "Helvetica-Bold", 11.5, signY+132, leftX, columnWidth, 0, 0, 0)
-	drawSignatureBlock(pdf, "Kepala Sekolah", settings.Signatory, settings.SignatoryNip, "NIP.", leftX, columnWidth, signY+147)
-	drawSignatureBlock(pdf, "Direktur LSP", settings.LspDirector, "", "", rightX, columnWidth, signY+147)
+	drawSignatureBlockWithImage(pdf, "Kepala Sekolah", settings.Signatory, settings.SignatoryNip, "NIP.", settings.SignatorySignature, leftX, columnWidth, signY+147)
+	drawSignatureBlockWithImage(pdf, "Direktur LSP", settings.LspDirector, "", "", settings.LspDirectorSignature, rightX, columnWidth, signY+147)
 }
 
 func resolveLSPDepartmentIdentity(jurusanName string, settings CertSettings) (string, string, string, string, string, string) {
@@ -2978,7 +2982,18 @@ func drawLSPLetterhead(pdf *gopdf.GoPdf, settings CertSettings, marginX, current
 }
 
 func drawSignatureBlock(pdf *gopdf.GoPdf, title, name, identifier, identifierLabel string, x, width, y float64) {
+	drawSignatureBlockWithImage(pdf, title, name, identifier, identifierLabel, "", x, width, y)
+}
+
+func drawSignatureBlockWithImage(pdf *gopdf.GoPdf, title, name, identifier, identifierLabel, signatureImage string, x, width, y float64) {
 	drawTextCenteredInArea(pdf, title, "Helvetica-Bold", 11.5, y, x, width, 0, 0, 0)
+	signatureImage = strings.TrimSpace(signatureImage)
+	if signatureImage != "" {
+		if holder, err := resolveImageHolder(signatureImage); err == nil {
+			lw, lh := scaleImage(signatureImage, 96, 42)
+			pdf.ImageByHolder(holder, x+(width-lw)/2, y+22+(42-lh)/2, &gopdf.Rect{W: lw, H: lh})
+		}
+	}
 	name = strings.TrimSpace(name)
 	if name == "" {
 		name = "-"
@@ -2995,19 +3010,16 @@ func drawSignatureBlock(pdf *gopdf.GoPdf, title, name, identifier, identifierLab
 	drawTextCenteredInArea(pdf, fmt.Sprintf("%s %s", identifierLabel, identifier), "Helvetica-Bold", 9.5, y+78, x, width, 0, 0, 0)
 }
 
-func resolveInternalExaminer(student map[string]interface{}, jurusanName string, settings CertSettings) (string, string) {
+func resolveInternalExaminer(student map[string]interface{}, jurusanName string, settings CertSettings) (string, string, string) {
 	name := strings.TrimSpace(valueFromStudent(student, "Penguji Internal"))
 	studentNip := strings.TrimSpace(valueFromStudent(student, "NIP/Reg Met Penguji"))
-	if studentNip != "" && studentNip != "-" {
-		return name, studentNip
-	}
 	if settings.Departments == nil {
-		return name, ""
+		return name, studentNip, ""
 	}
-	findInDepartment := func(deptData map[string]interface{}) string {
+	findInDepartment := func(deptData map[string]interface{}) (string, string) {
 		rawExaminers, ok := deptData["internalExaminers"].([]interface{})
 		if !ok {
-			return ""
+			return "", ""
 		}
 		for _, rawExaminer := range rawExaminers {
 			examiner, ok := rawExaminer.(map[string]interface{})
@@ -3018,27 +3030,36 @@ func resolveInternalExaminer(student map[string]interface{}, jurusanName string,
 			if strings.EqualFold(examinerName, name) {
 				nipValue := strings.TrimSpace(fmt.Sprintf("%v", examiner["nip"]))
 				if nipValue == "<nil>" {
-					return ""
+					nipValue = ""
 				}
-				return nipValue
+				signatureValue := strings.TrimSpace(fmt.Sprintf("%v", examiner["signature"]))
+				if signatureValue == "<nil>" {
+					signatureValue = ""
+				}
+				return nipValue, signatureValue
 			}
 		}
-		return ""
-	}
-	if deptData, ok := settings.Departments[jurusanName].(map[string]interface{}); ok {
-		return name, findInDepartment(deptData)
-	}
-	return name, ""
-}
-
-func resolveCompetencyHead(jurusanName string, settings CertSettings) (string, string) {
-	if settings.Departments == nil {
 		return "", ""
 	}
-	readHead := func(deptData map[string]interface{}) (string, string) {
+	var deptNip, deptSignature string
+	if deptData, ok := settings.Departments[jurusanName].(map[string]interface{}); ok {
+		deptNip, deptSignature = findInDepartment(deptData)
+	}
+	if studentNip != "" && studentNip != "-" {
+		return name, studentNip, deptSignature
+	}
+	return name, deptNip, deptSignature
+}
+
+func resolveCompetencyHead(jurusanName string, settings CertSettings) (string, string, string) {
+	if settings.Departments == nil {
+		return "", "", ""
+	}
+	readHead := func(deptData map[string]interface{}) (string, string, string) {
 		name, _ := deptData["competencyHeadName"].(string)
 		nip, _ := deptData["competencyHeadNip"].(string)
-		return strings.TrimSpace(name), strings.TrimSpace(nip)
+		signature, _ := deptData["competencyHeadSignature"].(string)
+		return strings.TrimSpace(name), strings.TrimSpace(nip), strings.TrimSpace(signature)
 	}
 	if deptData, ok := settings.Departments[jurusanName].(map[string]interface{}); ok {
 		return readHead(deptData)
@@ -3053,7 +3074,7 @@ func resolveCompetencyHead(jurusanName string, settings CertSettings) (string, s
 			return readHead(deptData)
 		}
 	}
-	return "", ""
+	return "", "", ""
 }
 
 func departmentAbbreviation(name string) string {
