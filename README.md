@@ -5,7 +5,7 @@ ESKILL Passport adalah aplikasi manajemen Skill Passport UKK/LSP untuk sekolah. 
 ## Kebutuhan Lokal
 
 - Node.js 20 atau lebih baru
-- Go 1.22 atau lebih baru
+- Go 1.26.3 atau lebih baru
 - PostgreSQL 14 atau lebih baru
 
 Untuk production yang direkomendasikan, server cukup memiliki:

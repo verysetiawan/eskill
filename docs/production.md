@@ -175,7 +175,7 @@ sudo apt update
 sudo apt install -y git postgresql postgresql-contrib nginx
 ```
 
-Install Node.js 20 dan Go sesuai panduan resmi distro/server yang digunakan.
+Install Node.js 20 dan Go 1.26.3 atau lebih baru sesuai panduan resmi distro/server yang digunakan.
 
 ## 2. Buat Database Manual
 
