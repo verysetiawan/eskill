@@ -1,15 +1,18 @@
 # Deploy dengan Docker
 
-Panduan ini cocok jika server sekolah sudah memiliki Docker dan Docker Compose.
+Panduan ini cocok jika server sekolah sudah memiliki Docker dan Docker Compose. Ini adalah cara production yang direkomendasikan untuk ESKILL Passport.
+
+Docker akan menjalankan dua layanan:
+
+- `app`: aplikasi ESKILL Passport.
+- `postgres`: database PostgreSQL.
 
 ## 1. Clone Repo
 
 ```bash
-git clone https://github.com/USERNAME/eskill-passport.git
-cd eskill-passport
+git clone https://github.com/verysetiawan/eskill.git
+cd eskill
 ```
-
-Ganti `USERNAME/eskill-passport` sesuai repo GitHub.
 
 ## 2. Buat File Environment
 
@@ -32,6 +35,13 @@ TZ=Asia/Jakarta
 
 File `.env.docker` tidak boleh diunggah ke GitHub.
 
+Keterangan:
+
+- `APP_PORT`: port yang dibuka di server.
+- `APP_URL`: domain production.
+- `JWT_SECRET`: kunci rahasia login, gunakan teks random panjang.
+- `POSTGRES_PASSWORD`: password database production.
+
 ## 3. Jalankan Aplikasi
 
 ```bash
@@ -53,6 +63,12 @@ http://IP-SERVER:3007
 
 atau domain yang diarahkan oleh reverse proxy.
 
+Jika ingin menghentikan aplikasi:
+
+```bash
+docker compose --env-file .env.docker down
+```
+
 ## 4. Restore Database dari Backup
 
 Jika kamu punya file backup `eskill-xxxx.dump`, salin ke server lalu jalankan:
@@ -68,6 +84,8 @@ docker compose --env-file .env.docker exec postgres pg_restore \
 docker compose --env-file .env.docker restart app
 ```
 
+Jika nama database atau user di `.env.docker` kamu ubah, sesuaikan `-U eskill` dan `-d eskill`.
+
 ## 5. Backup Database di Server
 
 ```bash
@@ -81,11 +99,21 @@ docker compose --env-file .env.docker exec -T postgres pg_dump \
 
 Folder `backups/` tidak ikut GitHub.
 
+Simpan file backup di tempat aman, misalnya storage server, NAS, flashdisk, atau cloud sekolah.
+
 ## 6. Update dari GitHub
 
 ```bash
 git pull
 docker compose --env-file .env.docker up -d --build
+```
+
+Perintah ini akan mengambil kode terbaru, membangun ulang aplikasi, lalu menjalankan container baru tanpa menghapus volume database.
+
+Jika ingin melihat log:
+
+```bash
+docker compose --env-file .env.docker logs -f app
 ```
 
 ## 7. Dua Aplikasi di Server yang Sama
