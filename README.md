@@ -78,3 +78,5 @@ Folder upload lain akan dibuat oleh aplikasi saat berjalan di server.
 ## Deploy Server Sekolah
 
 Lihat panduan di [docs/production.md](docs/production.md).
+
+Jika server sekolah sudah memakai Docker, lihat panduan di [docs/docker.md](docs/docker.md).

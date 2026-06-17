@@ -13,13 +13,17 @@ esuk-server-*
 .env.*
 !.env.example
 !.env.production.example
+!.env.docker.example
 
 # Runtime data
 local-data/
 uploads/*
 !uploads/logos/
 !uploads/logos/**
-#backups/
+backups/
+
+# Local Docker override can contain server-specific settings.
+docker-compose.override.yml
 
 # Logs and OS files
 *.log

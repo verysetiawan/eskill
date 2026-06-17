@@ -1,0 +1,47 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: eskill-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-eskill}
+      POSTGRES_USER: ${POSTGRES_USER:-eskill}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-this-password}
+      TZ: ${TZ:-Asia/Jakarta}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-eskill} -d ${POSTGRES_DB:-eskill}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: eskill-passport:latest
+    container_name: eskill-app
+    restart: unless-stopped
+    environment:
+      PORT: 3007
+      APP_URL: ${APP_URL:-http://127.0.0.1:3007}
+      JWT_SECRET: ${JWT_SECRET:-change-this-jwt-secret}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-eskill}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-change-this-password}
+      DB_NAME: ${POSTGRES_DB:-eskill}
+      DB_SSLMODE: disable
+      ALLOW_NO_DB: "false"
+      TZ: ${TZ:-Asia/Jakarta}
+    ports:
+      - "${APP_PORT:-3007}:3007"
+    volumes:
+      - ./uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
