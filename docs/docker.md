@@ -69,6 +69,16 @@ Jika ingin menghentikan aplikasi:
 docker compose --env-file .env.docker down
 ```
 
+Jika upload gambar gagal dengan pesan `permission denied`, perbaiki izin folder upload di server:
+
+```bash
+sudo mkdir -p uploads/logos
+sudo chown -R 100:101 uploads
+docker compose --env-file .env.docker up -d --build
+```
+
+Container juga otomatis mencoba memperbaiki izin folder upload saat start.
+
 ## 4. Restore Database dari Backup
 
 Jika kamu punya file backup `eskill-xxxx.dump`, salin ke server lalu jalankan:

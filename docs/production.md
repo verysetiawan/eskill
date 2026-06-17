@@ -87,6 +87,16 @@ http://IP-SERVER:3007
 
 Jika memakai domain, arahkan reverse proxy ke port tersebut.
 
+Jika fitur unggah logo/gambar menampilkan pesan `permission denied`, jalankan:
+
+```bash
+sudo mkdir -p uploads/logos
+sudo chown -R 100:101 uploads
+docker compose --env-file .env.docker up -d --build
+```
+
+Ini memberi izin tulis ke folder upload yang dipakai container.
+
 ### 5. Restore Database dari Laptop ke Server
 
 Jika kamu ingin membawa data dari laptop agar tidak mengisi ulang dari awal, buat backup dari PostgreSQL lokal lalu restore di server.

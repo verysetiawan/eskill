@@ -30,7 +30,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /out/esuk-server .
 
 FROM alpine:3.20
 
-RUN apk add --no-cache ca-certificates tzdata \
+RUN apk add --no-cache ca-certificates tzdata su-exec \
   && addgroup -S app \
   && adduser -S app -G app
 
@@ -40,11 +40,11 @@ COPY --from=backend /out/esuk-server ./esuk-server
 COPY --from=backend /app/dist ./dist
 COPY fonts ./fonts
 COPY uploads/logos ./uploads/logos
+COPY docker-entrypoint.sh ./docker-entrypoint.sh
 
-RUN mkdir -p uploads \
+RUN mkdir -p uploads/logos \
+  && chmod +x ./docker-entrypoint.sh \
   && chown -R app:app /app
-
-USER app
 
 ENV PORT=3007 \
   APP_URL=http://127.0.0.1:3007 \
@@ -58,4 +58,5 @@ ENV PORT=3007 \
 
 EXPOSE 3007
 
+ENTRYPOINT ["./docker-entrypoint.sh"]
 CMD ["./esuk-server"]
