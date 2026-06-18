@@ -191,6 +191,8 @@ const getClassOptionsForDepartment = (departmentName: string) => {
   return levels.flatMap(level => roomNumbers.map(room => `${level} ${abbreviation} ${room}`));
 };
 
+const normalizeStudentId = (value?: string) => (value || '').trim().replace(/\s+/g, '');
+
 const getDocumentSerial = (student: Student) => {
   const schoolNumber = (student['Nomor Surat'] || '').trim();
   if (schoolNumber) {
@@ -717,7 +719,11 @@ export default function Dashboard() {
   
   // Persist to localStorage and local backend (for Students)
   useEffect(() => {
-    localStorage.setItem('ukk_students', JSON.stringify(students));
+    if (students.length === 0) {
+      localStorage.removeItem('ukk_students');
+    } else {
+      localStorage.setItem('ukk_students', JSON.stringify(students));
+    }
     
     // Background save with debounce
     const timer = setTimeout(async () => {
@@ -988,13 +994,50 @@ export default function Dashboard() {
         }
         // ------------------------------------------
 
-        const existingList = Array.isArray(students) ? students : [];
+        let existingList = Array.isArray(students) ? students : [];
+        const { data: latestStudentData, error: latestStudentError } = await supabase.from('students').select('*');
+        if (!latestStudentError && Array.isArray(latestStudentData)) {
+          existingList = latestStudentData.map(d => ({
+            'Nama Siswa': d.nama_siswa,
+            'Nomor Seri': d.nomor_seri,
+            'Nomor Surat': d.nomor_surat,
+            NISN: d.nisn,
+            NIS: d.nis,
+            Jurusan: d.jurusan === 'Bisnis Daring dan Pemasaran' ? 'Bisnis Digital' : d.jurusan,
+            Kelas: d.kelas,
+            'Tahun Lulus': d.tahun_lulus,
+            Predikat: d.predikat,
+            'Penguji Internal': d.penguji_internal,
+            'NIP/Reg Met Penguji': d.nip_reg_met_penguji,
+            'Penguji Eksternal': d.penguji_eksternal,
+            'Mitra Industri': d.mitra_industri,
+            competencies: Array.isArray(d.competencies) ? d.competencies : []
+          }));
+          if (existingList.length === 0) {
+            localStorage.removeItem('ukk_students');
+          }
+        }
+
+        const existingKeys = new Set(
+          existingList.flatMap(oldItem => [
+            normalizeStudentId(oldItem.NISN),
+            normalizeStudentId(oldItem['Nomor Seri'])
+          ].filter(Boolean))
+        );
+        const fileKeys = new Set<string>();
         const newItems = data.students.filter((newItem: any) => {
-            // Cek duplikasi: Jika NISN atau Nomor Seri sama, anggap orang yang sama
-            const isDuplicate = existingList.some(oldItem => 
-                (newItem.NISN && oldItem.NISN && String(newItem.NISN) === String(oldItem.NISN)) ||
-                (newItem['Nomor Seri'] && oldItem['Nomor Seri'] && String(newItem['Nomor Seri']) === String(oldItem['Nomor Seri']))
+            const nisnKey = normalizeStudentId(newItem.NISN);
+            const serialKey = normalizeStudentId(newItem['Nomor Seri']);
+            const isDuplicate = Boolean(
+              (nisnKey && existingKeys.has(nisnKey)) ||
+              (serialKey && existingKeys.has(serialKey)) ||
+              (nisnKey && fileKeys.has(nisnKey)) ||
+              (serialKey && fileKeys.has(serialKey))
             );
+            if (!isDuplicate) {
+              if (nisnKey) fileKeys.add(nisnKey);
+              if (serialKey) fileKeys.add(serialKey);
+            }
             return !isDuplicate;
         });
         
@@ -1550,6 +1593,9 @@ export default function Dashboard() {
     const { error } = await supabase.from('students').delete().eq('nomor_seri', student['Nomor Seri']);
 
     setStudents(newStudents);
+    if (newStudents.length === 0) {
+      localStorage.removeItem('ukk_students');
+    }
     if (error) {
       console.error("Delete failed:", error);
       setNotification({ message: 'Data dihapus dari daftar lokal. Database lokal belum aktif.', type: 'info' });
@@ -4078,6 +4124,12 @@ export default function Dashboard() {
                               }
 
                               setStudents(remaining);
+                              if (remaining.length === 0) {
+                                 localStorage.removeItem('ukk_students');
+                                 setSelectedDepartment('Semua Jurusan');
+                                 setSelectedYear('Semua Tahun');
+                                 setSearchTerm('');
+                              }
                               setNotification({ message: `${toDelete.length} data siswa telah dibersihkan`, type: 'success' });
                            }
                         }}
@@ -4872,13 +4924,15 @@ export default function Dashboard() {
                   onClick={() => {
                     if (editingStudent) {
                       // Cek duplikasi NISN jika diubah
-                      const isDuplicate = students.some(s => 
-                        s['Nomor Seri'] !== editingStudent['Nomor Seri'] && 
-                        editingStudent.NISN && s.NISN === editingStudent.NISN
+                      const editedNisn = normalizeStudentId(editingStudent.NISN);
+                      const duplicateStudent = students.find(s =>
+                        s['Nomor Seri'] !== editingStudent['Nomor Seri'] &&
+                        editedNisn &&
+                        normalizeStudentId(s.NISN) === editedNisn
                       );
                       
-                      if (isDuplicate) {
-                        setNotification({ message: 'NISN sudah digunakan oleh siswa lain', type: 'error' });
+                      if (duplicateStudent) {
+                        setNotification({ message: `NISN sudah digunakan oleh ${duplicateStudent['Nama Siswa'] || 'siswa lain'}`, type: 'error' });
                         return;
                       }
 
@@ -4891,12 +4945,14 @@ export default function Dashboard() {
                       }
 
                       // Cek duplikasi NISN
-                      const isDuplicate = students.some(s => 
-                        newStudent.NISN && s.NISN === newStudent.NISN
+                      const newNisn = normalizeStudentId(newStudent.NISN);
+                      const duplicateStudent = students.find(s =>
+                        newNisn &&
+                        normalizeStudentId(s.NISN) === newNisn
                       );
 
-                      if (isDuplicate) {
-                        setNotification({ message: 'Siswa dengan NISN tersebut sudah ada dalam database', type: 'error' });
+                      if (duplicateStudent) {
+                        setNotification({ message: `Siswa dengan NISN tersebut sudah ada: ${duplicateStudent['Nama Siswa'] || 'tanpa nama'}. Cek filter pencarian/jurusan/tahun jika tidak terlihat di tabel.`, type: 'error' });
                         return;
                       }
 
