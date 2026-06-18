@@ -10,7 +10,7 @@ import (
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
-	_ "image/png"
+	"image/png"
 	"io"
 	"log"
 	"math/big"
@@ -2617,7 +2617,7 @@ func renderSkillPassportPDF(pdf *gopdf.GoPdf, student map[string]interface{}, se
 	pdf.AddPage()
 
 	marginX := 62.0
-	currentY := 24.0
+	currentY := 32.0
 
 	schoolName := strings.TrimSpace(settings.Name)
 	if schoolName == "" {
@@ -2796,7 +2796,7 @@ func renderSkillPassportPDF(pdf *gopdf.GoPdf, student map[string]interface{}, se
 func renderLSPSchemePDF(pdf *gopdf.GoPdf, student map[string]interface{}, settings CertSettings, pw, ph float64) {
 	pdf.AddPage()
 	marginX := 42.0
-	currentY := drawLSPLetterhead(pdf, settings, marginX, 22, pw)
+	currentY := drawLSPLetterhead(pdf, settings, marginX, 30, pw)
 	pdf.SetLineWidth(2)
 	pdf.Line(marginX, currentY, pw-marginX, currentY)
 
@@ -2992,8 +2992,7 @@ func drawSignatureBlockWithImage(pdf *gopdf.GoPdf, title, name, identifier, iden
 	drawTextCenteredInArea(pdf, title, "Helvetica-Bold", 11.5, y, x, width, 0, 0, 0)
 	signatureImage = strings.TrimSpace(signatureImage)
 	if signatureImage != "" {
-		if holder, err := resolveImageHolder(signatureImage); err == nil {
-			lw, lh := scaleImage(signatureImage, 140, 56)
+		if holder, lw, lh, err := resolveSignatureImage(signatureImage, 140, 56); err == nil {
 			pdf.ImageByHolder(holder, x+(width-lw)/2, y+14+(56-lh)/2, &gopdf.Rect{W: lw, H: lh})
 		}
 	}
@@ -3499,7 +3498,10 @@ func scaleImage(imagePath string, maxWidth, maxHeight float64) (float64, float64
 	if err != nil {
 		return maxWidth, maxHeight
 	}
+	return scaleImageBytes(imgBytes, maxWidth, maxHeight)
+}
 
+func scaleImageBytes(imgBytes []byte, maxWidth, maxHeight float64) (float64, float64) {
 	config, _, err := image.DecodeConfig(bytes.NewReader(imgBytes))
 	if err != nil {
 		return maxWidth, maxHeight
@@ -3538,8 +3540,7 @@ func readImageBytes(imagePath string) ([]byte, error) {
 
 	localPath := imagePath
 	if strings.HasPrefix(imagePath, "/uploads/") {
-		fileName := filepath.Base(imagePath)
-		localPath = filepath.Join("uploads", fileName)
+		localPath = filepath.Clean(strings.TrimPrefix(imagePath, "/"))
 	}
 
 	imgBytes, err := os.ReadFile(localPath)
@@ -3556,6 +3557,101 @@ func resolveImageHolder(imagePath string) (gopdf.ImageHolder, error) {
 		return nil, err
 	}
 	return gopdf.ImageHolderByBytes(imgBytes)
+}
+
+func resolveSignatureImage(imagePath string, maxWidth, maxHeight float64) (gopdf.ImageHolder, float64, float64, error) {
+	imgBytes, err := readImageBytes(imagePath)
+	if err != nil {
+		return nil, maxWidth, maxHeight, err
+	}
+	trimmedBytes, err := trimSignatureWhitespace(imgBytes)
+	if err == nil && len(trimmedBytes) > 0 {
+		imgBytes = trimmedBytes
+	}
+	holder, err := gopdf.ImageHolderByBytes(imgBytes)
+	if err != nil {
+		return nil, maxWidth, maxHeight, err
+	}
+	w, h := scaleImageBytes(imgBytes, maxWidth, maxHeight)
+	return holder, w, h, nil
+}
+
+func trimSignatureWhitespace(imgBytes []byte) ([]byte, error) {
+	img, _, err := image.Decode(bytes.NewReader(imgBytes))
+	if err != nil {
+		return nil, err
+	}
+	bounds := img.Bounds()
+	minX, minY := bounds.Max.X, bounds.Max.Y
+	maxX, maxY := bounds.Min.X, bounds.Min.Y
+	found := false
+
+	isInk := func(x, y int) bool {
+		r, g, b, a := img.At(x, y).RGBA()
+		if a < 0x1000 {
+			return false
+		}
+		return r < 0xf200 || g < 0xf200 || b < 0xf200
+	}
+
+	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+		for x := bounds.Min.X; x < bounds.Max.X; x++ {
+			if !isInk(x, y) {
+				continue
+			}
+			if x < minX {
+				minX = x
+			}
+			if y < minY {
+				minY = y
+			}
+			if x > maxX {
+				maxX = x
+			}
+			if y > maxY {
+				maxY = y
+			}
+			found = true
+		}
+	}
+	if !found {
+		return imgBytes, nil
+	}
+
+	padding := 10
+	if minX-padding > bounds.Min.X {
+		minX -= padding
+	} else {
+		minX = bounds.Min.X
+	}
+	if minY-padding > bounds.Min.Y {
+		minY -= padding
+	} else {
+		minY = bounds.Min.Y
+	}
+	if maxX+padding < bounds.Max.X {
+		maxX += padding
+	} else {
+		maxX = bounds.Max.X - 1
+	}
+	if maxY+padding < bounds.Max.Y {
+		maxY += padding
+	} else {
+		maxY = bounds.Max.Y - 1
+	}
+
+	cropRect := image.Rect(0, 0, maxX-minX+1, maxY-minY+1)
+	cropped := image.NewRGBA(cropRect)
+	for y := 0; y < cropRect.Dy(); y++ {
+		for x := 0; x < cropRect.Dx(); x++ {
+			cropped.Set(x, y, img.At(minX+x, minY+y))
+		}
+	}
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, cropped); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 func findIndustryLogo(mitraID, deptName string, industries, departments map[string]interface{}, defaultLogo string) string {
