@@ -779,6 +779,7 @@ export default function Dashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('Semua Jurusan');
   const [selectedYear, setSelectedYear] = useState<string>('Semua Tahun');
+  const [selectedClass, setSelectedClass] = useState<string>('Semua Kelas');
   const [selectedCertificateFormat, setSelectedCertificateFormat] = useState<'all' | 'ukk' | 'lsp'>('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
@@ -1297,7 +1298,8 @@ export default function Dashboard() {
   const getPrintFilteredStudents = () => students.filter((student) => {
     const matchesDept = selectedDepartment === 'Semua Jurusan' || student.Jurusan === selectedDepartment;
     const matchesYear = selectedYear === 'Semua Tahun' || student['Tahun Lulus'] === selectedYear;
-    return matchesDept && matchesYear;
+    const matchesClass = selectedClass === 'Semua Kelas' || student.Kelas === selectedClass;
+    return matchesDept && matchesYear && matchesClass;
   });
 
   const downloadScoreRecap = () => {
@@ -1614,11 +1616,18 @@ export default function Dashboard() {
     
     const matchesDept = selectedDepartment === 'Semua Jurusan' || s.Jurusan === selectedDepartment;
     const matchesYear = selectedYear === 'Semua Tahun' || s['Tahun Lulus'] === selectedYear;
+    const matchesClass = selectedClass === 'Semua Kelas' || s.Kelas === selectedClass;
     
-    return matchesSearch && matchesDept && matchesYear;
+    return matchesSearch && matchesDept && matchesYear && matchesClass;
   });
 
   const availableYears = Array.from(new Set(students.map(s => s['Tahun Lulus']))).sort();
+  const availableClasses = Array.from(new Set(students
+    .filter(s => selectedDepartment === 'Semua Jurusan' || s.Jurusan === selectedDepartment)
+    .filter(s => selectedYear === 'Semua Tahun' || s['Tahun Lulus'] === selectedYear)
+    .map(s => s.Kelas)
+    .filter(Boolean)
+  )).sort((a, b) => a.localeCompare(b, 'id', { numeric: true }));
 
   if (verifyMode.active) {
     const isScanMode = verifyMode.serial === null;
@@ -3334,7 +3343,10 @@ export default function Dashboard() {
                         <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                         <select 
                           value={selectedYear}
-                          onChange={(e) => setSelectedYear(e.target.value)}
+                          onChange={(e) => {
+                            setSelectedYear(e.target.value);
+                            setSelectedClass('Semua Kelas');
+                          }}
                           className="w-full pl-9 pr-4 py-2.5 bg-app-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent appearance-none font-bold text-xs truncate transition-all cursor-pointer"
                         >
                           <option>Semua Tahun</option>
@@ -3347,12 +3359,28 @@ export default function Dashboard() {
                         <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                         <select 
                           value={selectedDepartment}
-                          onChange={(e) => setSelectedDepartment(e.target.value)}
+                          onChange={(e) => {
+                            setSelectedDepartment(e.target.value);
+                            setSelectedClass('Semua Kelas');
+                          }}
                           className="w-full pl-9 pr-4 py-2.5 bg-app-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent appearance-none font-bold text-xs truncate transition-all cursor-pointer"
                         >
                           <option>Semua Jurusan</option>
                           {Object.keys(settings.departments).map(dept => (
                             <option key={dept} value={dept}>{dept}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="relative text-sm w-36">
+                        <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                        <select
+                          value={selectedClass}
+                          onChange={(e) => setSelectedClass(e.target.value)}
+                          className="w-full pl-9 pr-4 py-2.5 bg-app-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent appearance-none font-bold text-xs truncate transition-all cursor-pointer"
+                        >
+                          <option>Semua Kelas</option>
+                          {availableClasses.map(className => (
+                            <option key={className} value={className}>{className}</option>
                           ))}
                         </select>
                       </div>
@@ -4042,12 +4070,15 @@ export default function Dashboard() {
                       </div>
                    </div>
 
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-app-bg/30 p-8 rounded-3xl border border-border/50">
+                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8 bg-app-bg/30 p-8 rounded-3xl border border-border/50">
                       <div className="space-y-3">
                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Filter Jurusan</label>
                         <select 
                           value={selectedDepartment}
-                          onChange={(e) => setSelectedDepartment(e.target.value)}
+                          onChange={(e) => {
+                            setSelectedDepartment(e.target.value);
+                            setSelectedClass('Semua Kelas');
+                          }}
                           className="w-full px-5 py-4 bg-white border border-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 font-bold text-sm shadow-sm transition-all text-primary"
                         >
                           <option>Semua Jurusan</option>
@@ -4061,12 +4092,29 @@ export default function Dashboard() {
                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Filter Tahun Lulus</label>
                         <select 
                           value={selectedYear}
-                          onChange={(e) => setSelectedYear(e.target.value)}
+                          onChange={(e) => {
+                            setSelectedYear(e.target.value);
+                            setSelectedClass('Semua Kelas');
+                          }}
                           className="w-full px-5 py-4 bg-white border border-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 font-bold text-sm shadow-sm transition-all text-primary"
                         >
                           <option>Semua Tahun</option>
                           {availableYears.map(year => (
                             <option key={year} value={year}>{year}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-3">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Filter Kelas</label>
+                        <select
+                          value={selectedClass}
+                          onChange={(e) => setSelectedClass(e.target.value)}
+                          className="w-full px-5 py-4 bg-white border border-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 font-bold text-sm shadow-sm transition-all text-primary"
+                        >
+                          <option>Semua Kelas</option>
+                          {availableClasses.map(className => (
+                            <option key={className} value={className}>{className}</option>
                           ))}
                         </select>
                       </div>
@@ -4078,7 +4126,8 @@ export default function Dashboard() {
                             {students.filter(s => {
                                const matchesDept = selectedDepartment === 'Semua Jurusan' || s.Jurusan === selectedDepartment;
                                const matchesYear = selectedYear === 'Semua Tahun' || s['Tahun Lulus'] === selectedYear;
-                               return matchesDept && matchesYear;
+                               const matchesClass = selectedClass === 'Semua Kelas' || s.Kelas === selectedClass;
+                               return matchesDept && matchesYear && matchesClass;
                             }).length}
                          </div>
                          <div>
@@ -4091,18 +4140,20 @@ export default function Dashboard() {
                         disabled={students.filter(s => {
                            const matchesDept = selectedDepartment === 'Semua Jurusan' || s.Jurusan === selectedDepartment;
                            const matchesYear = selectedYear === 'Semua Tahun' || s['Tahun Lulus'] === selectedYear;
-                           return matchesDept && matchesYear;
+                           const matchesClass = selectedClass === 'Semua Kelas' || s.Kelas === selectedClass;
+                           return matchesDept && matchesYear && matchesClass;
                         }).length === 0}
                         onClick={async () => {
                            const toDelete = students.filter(s => {
                               const matchesDept = selectedDepartment === 'Semua Jurusan' || s.Jurusan === selectedDepartment;
                               const matchesYear = selectedYear === 'Semua Tahun' || s['Tahun Lulus'] === selectedYear;
-                              return matchesDept && matchesYear;
+                              const matchesClass = selectedClass === 'Semua Kelas' || s.Kelas === selectedClass;
+                              return matchesDept && matchesYear && matchesClass;
                            });
 
                            if (toDelete.length === 0) return;
 
-                           const message = selectedDepartment === 'Semua Jurusan' && selectedYear === 'Semua Tahun' 
+                           const message = selectedDepartment === 'Semua Jurusan' && selectedYear === 'Semua Tahun' && selectedClass === 'Semua Kelas'
                               ? `APAKAH ANDA YAKIN?\n\nTindakan ini akan MENGHAPUS SELURUH database (${toDelete.length} siswa).\nData yang telah dihapus tidak dapat dikembalikan.`
                               : `Hapus ${toDelete.length} data siswa untuk filter yang dipilih?\n\nTindakan ini tidak dapat dibatalkan.`;
 
@@ -4110,7 +4161,8 @@ export default function Dashboard() {
                               const remaining = students.filter(s => {
                                  const matchesDept = selectedDepartment === 'Semua Jurusan' || s.Jurusan === selectedDepartment;
                                  const matchesYear = selectedYear === 'Semua Tahun' || s['Tahun Lulus'] === selectedYear;
-                                 return !(matchesDept && matchesYear);
+                                 const matchesClass = selectedClass === 'Semua Kelas' || s.Kelas === selectedClass;
+                                 return !(matchesDept && matchesYear && matchesClass);
                               });
                               
                               const deleteSerials = toDelete.map(s => s['Nomor Seri']).filter(Boolean);
@@ -4128,6 +4180,7 @@ export default function Dashboard() {
                                  localStorage.removeItem('ukk_students');
                                  setSelectedDepartment('Semua Jurusan');
                                  setSelectedYear('Semua Tahun');
+                                 setSelectedClass('Semua Kelas');
                                  setSearchTerm('');
                               }
                               setNotification({ message: `${toDelete.length} data siswa telah dibersihkan`, type: 'success' });
