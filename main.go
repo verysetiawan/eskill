@@ -2990,8 +2990,8 @@ func drawSignatureBlockWithImage(pdf *gopdf.GoPdf, title, name, identifier, iden
 	signatureImage = strings.TrimSpace(signatureImage)
 	if signatureImage != "" {
 		if holder, err := resolveImageHolder(signatureImage); err == nil {
-			lw, lh := scaleImage(signatureImage, 240, 96)
-			pdf.ImageByHolder(holder, x+(width-lw)/2, y+2+(96-lh)/2, &gopdf.Rect{W: lw, H: lh})
+			lw, lh := scaleImage(signatureImage, 205, 82)
+			pdf.ImageByHolder(holder, x+(width-lw)/2, y+8+(82-lh)/2, &gopdf.Rect{W: lw, H: lh})
 		}
 	}
 	name = strings.TrimSpace(name)
