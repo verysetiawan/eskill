@@ -3893,9 +3893,9 @@ export default function Dashboard() {
                                    <div className="grid grid-cols-2 gap-x-16 gap-y-3 mt-2 text-[8px] font-bold">
                                      <div className="text-center">
                                        <p>{isLSPPreview ? 'Manajer Sertifikasi' : `Kakonli ${acronym}`}</p>
-                                       <div className="h-12 flex items-center justify-center">
+                                       <div className="h-16 flex items-start justify-center -mt-1">
                                          {(isLSPPreview ? settings.school.certificationManagerSignature : department?.competencyHeadSignature) && (
-                                           <img src={isLSPPreview ? settings.school.certificationManagerSignature : department?.competencyHeadSignature} className="max-h-12 max-w-[135px] object-contain" />
+                                           <img src={isLSPPreview ? settings.school.certificationManagerSignature : department?.competencyHeadSignature} className="max-h-16 max-w-[210px] object-contain" />
                                          )}
                                        </div>
                                        <p>{isLSPPreview ? (settings.school.certificationManager || '-') : (department?.competencyHeadName || '-')}</p>
@@ -3904,8 +3904,8 @@ export default function Dashboard() {
                                      <div className="text-center">
                                        <p>{settings.school.city || '-'}, {settings.school.date || '-'}</p>
                                        <p>{isLSPPreview ? 'Asesor' : 'Penguji'}</p>
-                                       <div className="h-12 flex items-center justify-center">
-                                         {examiner?.signature && <img src={examiner.signature} className="max-h-12 max-w-[135px] object-contain" />}
+                                       <div className="h-16 flex items-start justify-center -mt-1">
+                                         {examiner?.signature && <img src={examiner.signature} className="max-h-16 max-w-[210px] object-contain" />}
                                        </div>
                                        <p>{s['Penguji Internal'] || '-'}</p>
                                        <p>{isLSPPreview ? 'Reg MET.' : 'NIP.'} {s['NIP/Reg Met Penguji'] || examiner?.nip || '-'}</p>
@@ -3913,8 +3913,8 @@ export default function Dashboard() {
                                      <div className="text-center pt-5">
                                        <p>Mengetahui,</p>
                                        <p>Kepala Sekolah</p>
-                                       <div className="h-12 flex items-center justify-center">
-                                         {settings.school.signatorySignature && <img src={settings.school.signatorySignature} className="max-h-12 max-w-[135px] object-contain" />}
+                                       <div className="h-16 flex items-start justify-center -mt-1">
+                                         {settings.school.signatorySignature && <img src={settings.school.signatorySignature} className="max-h-16 max-w-[210px] object-contain" />}
                                        </div>
                                        <p>{settings.school.signatory || '-'}</p>
                                        <p>NIP. {settings.school.signatoryNip || '-'}</p>
@@ -3922,9 +3922,9 @@ export default function Dashboard() {
                                      <div className="text-center pt-5">
                                        <p className="invisible" aria-hidden="true">Mengetahui,</p>
                                        <p>{isLSPPreview ? 'Direktur LSP' : 'Waka Kurikulum'}</p>
-                                       <div className="h-12 flex items-center justify-center">
+                                       <div className="h-16 flex items-start justify-center -mt-1">
                                          {(isLSPPreview ? settings.school.lspDirectorSignature : settings.school.vicePrincipalCurriculumSignature) && (
-                                           <img src={isLSPPreview ? settings.school.lspDirectorSignature : settings.school.vicePrincipalCurriculumSignature} className="max-h-12 max-w-[135px] object-contain" />
+                                           <img src={isLSPPreview ? settings.school.lspDirectorSignature : settings.school.vicePrincipalCurriculumSignature} className="max-h-16 max-w-[210px] object-contain" />
                                          )}
                                        </div>
                                        <p>{isLSPPreview ? (settings.school.lspDirector || '-') : (settings.school.vicePrincipalCurriculum || '-')}</p>

@@ -2990,15 +2990,15 @@ func drawSignatureBlockWithImage(pdf *gopdf.GoPdf, title, name, identifier, iden
 	signatureImage = strings.TrimSpace(signatureImage)
 	if signatureImage != "" {
 		if holder, err := resolveImageHolder(signatureImage); err == nil {
-			lw, lh := scaleImage(signatureImage, 150, 58)
-			pdf.ImageByHolder(holder, x+(width-lw)/2, y+18+(58-lh)/2, &gopdf.Rect{W: lw, H: lh})
+			lw, lh := scaleImage(signatureImage, 240, 96)
+			pdf.ImageByHolder(holder, x+(width-lw)/2, y+2+(96-lh)/2, &gopdf.Rect{W: lw, H: lh})
 		}
 	}
 	name = strings.TrimSpace(name)
 	if name == "" {
 		name = "-"
 	}
-	drawTextCenteredInArea(pdf, name, "Helvetica-Bold", 11.5, y+76, x, width, 0, 0, 0)
+	drawTextCenteredInArea(pdf, name, "Helvetica-Bold", 11.5, y+74, x, width, 0, 0, 0)
 	identifier = strings.TrimSpace(identifier)
 	identifierLabel = strings.TrimSpace(identifierLabel)
 	if identifierLabel == "" {
@@ -3007,7 +3007,7 @@ func drawSignatureBlockWithImage(pdf *gopdf.GoPdf, title, name, identifier, iden
 	if identifier == "" {
 		identifier = "-"
 	}
-	drawTextCenteredInArea(pdf, fmt.Sprintf("%s %s", identifierLabel, identifier), "Helvetica-Bold", 9.5, y+90, x, width, 0, 0, 0)
+	drawTextCenteredInArea(pdf, fmt.Sprintf("%s %s", identifierLabel, identifier), "Helvetica-Bold", 9.5, y+88, x, width, 0, 0, 0)
 }
 
 func resolveInternalExaminer(student map[string]interface{}, jurusanName string, settings CertSettings) (string, string, string) {
