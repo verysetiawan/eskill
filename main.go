@@ -2753,14 +2753,17 @@ func renderSkillPassportPDF(pdf *gopdf.GoPdf, student map[string]interface{}, se
 	competencies := resolveSkillPassportCompetencies(student, settings, jurusanName)
 	currentY = drawSkillPassportTable(pdf, competencies, marginX, currentY, pw, ph)
 
-	if currentY+305 > ph {
+	closingLines := wrapText(pdf, "Demikian surat keterangan ini kami sampaikan untuk dipergunakan sebagaimana mestinya.", pw-(marginX*2), "Helvetica", 11.5)
+	closingTextHeight := float64(len(closingLines)) * 16
+	signatureBlockHeight := 238.0
+	requiredSignatureArea := 22 + closingTextHeight + 4 + signatureBlockHeight
+	if currentY+requiredSignatureArea > ph-24 {
 		pdf.AddPage()
 		currentY = 46
 	}
 
-	currentY += 28
+	currentY += 22
 	pdf.SetFont("Helvetica", "", 11.5)
-	closingLines := wrapText(pdf, "Demikian surat keterangan ini kami sampaikan untuk dipergunakan sebagaimana mestinya.", pw-(marginX*2), "Helvetica", 11.5)
 	for _, line := range closingLines {
 		pdf.SetXY(marginX, currentY)
 		pdf.Text(line)
