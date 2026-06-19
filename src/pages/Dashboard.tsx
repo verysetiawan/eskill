@@ -192,6 +192,7 @@ const getClassOptionsForDepartment = (departmentName: string) => {
 };
 
 const normalizeStudentId = (value?: string) => (value || '').trim().replace(/\s+/g, '');
+const normalizeStudentText = (value?: string) => (value || '').trim().toLowerCase().replace(/\s+/g, ' ');
 
 const getDocumentSerial = (student: Student) => {
   const schoolNumber = (student['Nomor Surat'] || '').trim();
@@ -202,6 +203,72 @@ const getDocumentSerial = (student: Student) => {
   }
   return student['Nomor Seri'] || '';
 };
+
+const getStudentDedupeKey = (student: Partial<Student>) => {
+  const nisn = normalizeStudentId(student.NISN);
+  const nis = normalizeStudentId(student.NIS);
+  const name = normalizeStudentText(student['Nama Siswa']);
+  const department = normalizeStudentText(student.Jurusan);
+  const className = normalizeStudentText(student.Kelas);
+
+  if (nisn) return `nisn:${nisn}`;
+  if (nis) return `nis:${nis}|${department}|${className}`;
+  return `name:${name}|${department}|${className}`;
+};
+
+const getStudentScoreImportKey = (student: Partial<Student>) => {
+  const name = normalizeStudentText(student['Nama Siswa']);
+  const department = normalizeStudentText(student.Jurusan);
+  const className = normalizeStudentText(student.Kelas);
+  return `${name}|${department}|${className}`;
+};
+
+const dedupeStudentsByIdentity = (studentList: Student[]) => {
+  const byKey = new Map<string, Student>();
+  const duplicateSerials: string[] = [];
+
+  studentList.forEach((student) => {
+    const key = getStudentDedupeKey(student);
+    const existing = byKey.get(key);
+    if (!existing) {
+      byKey.set(key, student);
+      return;
+    }
+
+    const existingScoreCount = existing.competencies?.length || 0;
+    const currentScoreCount = student.competencies?.length || 0;
+    const keepCurrent = currentScoreCount > existingScoreCount;
+    const kept = keepCurrent ? student : existing;
+    const removed = keepCurrent ? existing : student;
+
+    if (removed['Nomor Seri'] && removed['Nomor Seri'] !== kept['Nomor Seri']) {
+      duplicateSerials.push(removed['Nomor Seri']);
+    }
+    byKey.set(key, kept);
+  });
+
+  return {
+    students: Array.from(byKey.values()),
+    duplicateSerials: Array.from(new Set(duplicateSerials)),
+  };
+};
+
+const formatStudentForDatabase = (s: Student) => ({
+  nama_siswa: s['Nama Siswa'] || '',
+  nomor_seri: s['Nomor Seri'] || '',
+  nomor_surat: s['Nomor Surat'] || '',
+  nisn: s.NISN || '',
+  nis: s.NIS || '',
+  jurusan: s.Jurusan || '',
+  kelas: s.Kelas || '',
+  tahun_lulus: s['Tahun Lulus'] || '',
+  predikat: s.Predikat || '',
+  penguji_internal: s['Penguji Internal'] || null,
+  nip_reg_met_penguji: s['NIP/Reg Met Penguji'] || null,
+  penguji_eksternal: s['Penguji Eksternal'] || null,
+  mitra_industri: s['Mitra Industri'] || null,
+  competencies: s.competencies || []
+});
 
 const resolvePreviewDocumentNumber = (
   student: Student,
@@ -241,7 +308,7 @@ const canAccessTab = (role: RoleType, tab: DashboardTab) => {
   if (role === 'admin') return true;
   if (role === 'entry') return !['users', 'activity-logs'].includes(tab);
   if (role === 'lsp') return !['users', 'school', 'settings', 'activity-logs'].includes(tab);
-  return ['departments', 'students', 'scores', 'certificates', 'validation'].includes(tab);
+  return ['departments', 'students', 'scores', 'certificates', 'bulk-delete', 'validation'].includes(tab);
 };
 
 export default function Dashboard() {
@@ -731,22 +798,7 @@ export default function Dashboard() {
       
       setSyncStatus('syncing');
       try {
-         const formatted = students.map(s => ({
-            nama_siswa: s['Nama Siswa'] || '',
-            nomor_seri: s['Nomor Seri'] || '',
-            nomor_surat: s['Nomor Surat'] || '',
-            nisn: s.NISN || '',
-            nis: s.NIS || '',
-            jurusan: s.Jurusan || '',
-            kelas: s.Kelas || '',
-            tahun_lulus: s['Tahun Lulus'] || '',
-            predikat: s.Predikat || '',
-	            penguji_internal: s['Penguji Internal'] || null,
-	            nip_reg_met_penguji: s['NIP/Reg Met Penguji'] || null,
-            penguji_eksternal: s['Penguji Eksternal'] || null,
-            mitra_industri: s['Mitra Industri'] || null,
-            competencies: s.competencies || []
-         }));
+         const formatted = students.map(formatStudentForDatabase);
          
          const { error } = await supabase.from('students').upsert(formatted, { onConflict: 'nomor_seri' });
          if (error) {
@@ -782,6 +834,7 @@ export default function Dashboard() {
   const [selectedClass, setSelectedClass] = useState<string>('Semua Kelas');
   const [selectedDeleteClasses, setSelectedDeleteClasses] = useState<string[]>([]);
   const [selectedCertificateFormat, setSelectedCertificateFormat] = useState<'all' | 'ukk' | 'lsp'>('all');
+  const [scoreRowsPerPage, setScoreRowsPerPage] = useState<number>(50);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [newStudent, setNewStudent] = useState<Partial<Student>>({
@@ -1221,14 +1274,21 @@ export default function Dashboard() {
         return;
       }
 
+      const scoreRowsByKey = new Map<string, Record<string, any>>();
+      rows.forEach((row) => {
+        const rowKey = getStudentScoreImportKey({
+          'Nama Siswa': String(row['Nama Siswa'] || row.nama_siswa || ''),
+          Jurusan: String(row.Jurusan || row.jurusan || ''),
+          Kelas: String(row.Kelas || row.kelas || ''),
+        });
+        if (!scoreRowsByKey.has(rowKey)) {
+          scoreRowsByKey.set(rowKey, row);
+        }
+      });
+
       let updatedCount = 0;
       const updatedStudents = students.map((student) => {
-        const match = rows.find((row) => {
-          const normalize = (value: any) => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
-          return normalize(row['Nama Siswa'] || row.nama_siswa) === normalize(student['Nama Siswa'])
-            && normalize(row.Jurusan || row.jurusan) === normalize(student.Jurusan)
-            && normalize(row.Kelas || row.kelas) === normalize(student.Kelas);
-        });
+        const match = scoreRowsByKey.get(getStudentScoreImportKey(student));
 
         if (!match) return student;
 
@@ -1258,8 +1318,25 @@ export default function Dashboard() {
         return;
       }
 
-      setStudents(updatedStudents);
-      setNotification({ message: `Nilai ${updatedCount} siswa berhasil diperbarui`, type: 'success' });
+      const deduped = dedupeStudentsByIdentity(updatedStudents);
+      const { error: saveError } = await supabase.from('students').upsert(deduped.students.map(formatStudentForDatabase), { onConflict: 'nomor_seri' });
+      if (saveError) {
+        setNotification({ message: `Gagal menyimpan nilai ke database: ${saveError.message}`, type: 'error' });
+        return;
+      }
+
+      if (deduped.duplicateSerials.length > 0) {
+        const { error: deleteError } = await supabase.from('students').delete().in('nomor_seri', deduped.duplicateSerials);
+        if (deleteError) {
+          console.warn('Gagal membersihkan data nilai duplikat:', deleteError);
+        }
+      }
+
+      setStudents(deduped.students);
+      const duplicateMessage = deduped.duplicateSerials.length > 0
+        ? `, ${deduped.duplicateSerials.length} data dobel dibersihkan`
+        : '';
+      setNotification({ message: `Nilai ${updatedCount} siswa berhasil diperbarui${duplicateMessage}`, type: 'success' });
     } catch (err: any) {
       console.error(err);
       setNotification({ message: 'Gagal membaca file nilai siswa.', type: 'error' });
@@ -1621,6 +1698,7 @@ export default function Dashboard() {
     
     return matchesSearch && matchesDept && matchesYear && matchesClass;
   });
+  const displayedScoreStudents = filteredStudents.slice(0, scoreRowsPerPage);
 
   const availableYears = Array.from(new Set(students.map(s => s['Tahun Lulus']))).sort();
   const availableClasses = Array.from(new Set(students
@@ -1888,7 +1966,7 @@ export default function Dashboard() {
                 icon={<Printer size={18} />} 
                 label="Cetak Skill Passport" 
               />
-              {(userRole === 'admin' || userRole === 'entry' || userRole === 'lsp') && (
+              {(userRole === 'admin' || userRole === 'entry' || userRole === 'lsp' || userRole === 'kakonli') && (
                 <NavItem 
                   expanded={isSidebarExpanded}
                   active={activeTab === 'bulk-delete'} 
@@ -3519,7 +3597,7 @@ export default function Dashboard() {
                     <div>
                       <h3 className="font-display font-bold text-lg text-primary tracking-tight">Rekap Nilai Unit Kompetensi</h3>
                       <p className="text-[11px] text-text-muted font-bold tracking-widest uppercase mt-0.5">
-                        Maksimal 64 unit per siswa
+                        Maksimal 64 unit per siswa. Menampilkan {displayedScoreStudents.length} dari {filteredStudents.length} data.
                       </p>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-4 sm:items-center">
@@ -3559,6 +3637,18 @@ export default function Dashboard() {
                           ))}
                         </select>
                       </div>
+                      <div className="relative text-sm w-36">
+                        <select
+                          value={scoreRowsPerPage}
+                          onChange={(e) => setScoreRowsPerPage(Number(e.target.value))}
+                          className="w-full px-4 py-2.5 bg-app-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent appearance-none font-bold text-xs truncate transition-all cursor-pointer"
+                          title="Jumlah baris yang ditampilkan"
+                        >
+                          {[50, 100, 200, 500, 1000].map(limit => (
+                            <option key={limit} value={limit}>{limit} Baris</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   </div>
 
@@ -3578,7 +3668,7 @@ export default function Dashboard() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
-                        {filteredStudents.length > 0 ? filteredStudents.map((student, idx) => (
+                        {displayedScoreStudents.length > 0 ? displayedScoreStudents.map((student, idx) => (
                           <tr key={idx} className="hover:bg-app-bg/30 transition-all">
                             <td className="sticky left-0 bg-white px-6 py-4 z-30 min-w-[220px] shadow-[8px_0_16px_rgba(15,23,42,0.04)]">
                               <p className="font-display font-bold text-sm text-primary">{student['Nama Siswa'] || '-'}</p>

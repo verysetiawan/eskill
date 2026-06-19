@@ -20,28 +20,54 @@ export default function Landing() {
   const [studentData, setStudentData] = useState<any | null>(null);
 
   // Sync settings for School Name & Logo
-  const [schoolName, setSchoolName] = useState('SMK N 1 CONTOH');
+  const [schoolName, setSchoolName] = useState('Sekolah');
   const [schoolLogo, setSchoolLogo] = useState<string | null>(null);
   
   useEffect(() => {
+    const applySchoolSettings = (settings: any) => {
+      if (!settings?.school) return;
+
+      if (settings.school.name) {
+        setSchoolName(settings.school.name);
+        document.title = `My E-Skill - ${settings.school.name}`;
+      }
+
+      if (settings.school.logo) {
+        setSchoolLogo(settings.school.logo);
+        let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+        if (!link) {
+          link = document.createElement('link');
+          link.rel = 'icon';
+          document.getElementsByTagName('head')[0].appendChild(link);
+        }
+        link.href = settings.school.logo;
+      }
+    };
+
     const saved = localStorage.getItem('ukk_settings');
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
-        if (parsed?.school?.name) setSchoolName(parsed.school.name);
-        if (parsed?.school?.logo) {
-          setSchoolLogo(parsed.school.logo);
-          // Sync Favicon
-          let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
-          if (!link) {
-            link = document.createElement('link');
-            link.rel = 'icon';
-            document.getElementsByTagName('head')[0].appendChild(link);
-          }
-          link.href = parsed.school.logo;
-        }
+        applySchoolSettings(JSON.parse(saved));
       } catch (e) {}
     }
+
+    const loadPublicSchoolSettings = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('app_settings')
+          .select('data')
+          .eq('id', 1)
+          .single();
+
+        if (error || !data?.data) return;
+        applySchoolSettings(data.data);
+        localStorage.setItem('ukk_settings', JSON.stringify(data.data));
+      } catch (e) {
+        console.warn('Gagal memuat data sekolah publik:', e);
+      }
+    };
+
+    loadPublicSchoolSettings();
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
