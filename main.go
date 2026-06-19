@@ -2735,7 +2735,7 @@ func renderSkillPassportPDF(pdf *gopdf.GoPdf, student map[string]interface{}, se
 		}
 	}
 
-	assignmentTitle := resolveAssignmentTitle(jurusanName, settings)
+	assignmentTitle := resolveAssignmentTitle(jurusanName, valueFromStudent(student, "Kelas"), settings)
 	if assignmentTitle == "" {
 		assignmentTitle = jurusanName
 	}
@@ -3147,14 +3147,12 @@ func resolveDocumentNumber(student map[string]interface{}, settings CertSettings
 	return "-"
 }
 
-func resolveAssignmentTitle(jurusanName string, settings CertSettings) string {
+func resolveAssignmentTitle(jurusanName, className string, settings CertSettings) string {
 	if settings.Departments == nil {
 		return ""
 	}
 	if deptData, ok := settings.Departments[jurusanName].(map[string]interface{}); ok {
-		if title, ok := deptData["assignmentTitleId"].(string); ok {
-			return strings.TrimSpace(title)
-		}
+		return assignmentTitleFromDepartment(deptData, className)
 	}
 	for _, rawDept := range settings.Departments {
 		deptData, ok := rawDept.(map[string]interface{})
@@ -3163,11 +3161,33 @@ func resolveAssignmentTitle(jurusanName string, settings CertSettings) string {
 		}
 		name, _ := deptData["name"].(string)
 		if strings.EqualFold(strings.TrimSpace(name), strings.TrimSpace(jurusanName)) {
-			title, _ := deptData["assignmentTitleId"].(string)
-			return strings.TrimSpace(title)
+			return assignmentTitleFromDepartment(deptData, className)
 		}
 	}
 	return ""
+}
+
+func assignmentTitleFromDepartment(deptData map[string]interface{}, className string) string {
+	readTitle := func(key string) string {
+		title, _ := deptData[key].(string)
+		return strings.TrimSpace(title)
+	}
+
+	defaultTitle := readTitle("assignmentTitleId")
+	normalizedClass := strings.ToUpper(strings.TrimSpace(className))
+	switch {
+	case strings.HasPrefix(normalizedClass, "XII"):
+		return defaultTitle
+	case strings.HasPrefix(normalizedClass, "XI"):
+		if title := readTitle("assignmentTitleClassXI"); title != "" {
+			return title
+		}
+	case strings.HasPrefix(normalizedClass, "X"):
+		if title := readTitle("assignmentTitleClassX"); title != "" {
+			return title
+		}
+	}
+	return defaultTitle
 }
 
 func resolveDepartmentIdentity(jurusanName string, settings CertSettings) (string, string) {

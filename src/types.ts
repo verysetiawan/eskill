@@ -32,6 +32,8 @@ export interface DepartmentSettings {
   logo?: string;
   background?: string;
   assignmentTitleId: string; // Judul Penugasan (Bahasa Indonesia)
+  assignmentTitleClassX?: string;
+  assignmentTitleClassXI?: string;
   assignmentTitleEn?: string; // Legacy field
   competencyHeadName?: string;
   competencyHeadNip?: string;

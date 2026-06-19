@@ -36,7 +36,7 @@ import {
   ScrollText,
   RefreshCw
 } from 'lucide-react';
-import { Student, AppSettings, DocumentNumbering, RoleType, UserAccount, IndustrySettings } from '../types';
+import { Student, AppSettings, DocumentNumbering, RoleType, UserAccount, IndustrySettings, DepartmentSettings } from '../types';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { Scanner } from '@yudiel/react-qr-scanner';
@@ -221,6 +221,17 @@ const getStudentScoreImportKey = (student: Partial<Student>) => {
   const department = normalizeStudentText(student.Jurusan);
   const className = normalizeStudentText(student.Kelas);
   return `${name}|${department}|${className}`;
+};
+
+const getAssignmentTitleForClass = (department?: DepartmentSettings, className?: string) => {
+  if (!department) return '-';
+
+  const normalizedClass = (className || '').trim().toUpperCase();
+  if (normalizedClass.startsWith('XII')) return department.assignmentTitleId || '-';
+  if (normalizedClass.startsWith('XI')) return department.assignmentTitleClassXI || department.assignmentTitleId || '-';
+  if (normalizedClass.startsWith('X')) return department.assignmentTitleClassX || department.assignmentTitleId || '-';
+
+  return department.assignmentTitleId || '-';
 };
 
 const dedupeStudentsByIdentity = (studentList: Student[]) => {
@@ -2995,13 +3006,33 @@ export default function Dashboard() {
                             </div>
 
                             <Input 
-                              label="Judul Penugasan (IND)" 
+                              label="Judul Penugasan Kelas XII / Default (IND)" 
                               value={settings.departments[editingDept].assignmentTitleId} 
                               onChange={(v) => {
                                 const newDepts = { ...settings.departments };
                                 newDepts[editingDept].assignmentTitleId = v;
                                 setSettings({ ...settings, departments: newDepts });
                               }} 
+                            />
+                            <Input
+                              label="Judul Penugasan Kelas X (IND)"
+                              placeholder="Kosongkan jika sama dengan default"
+                              value={settings.departments[editingDept].assignmentTitleClassX || ''}
+                              onChange={(v) => {
+                                const newDepts = { ...settings.departments };
+                                newDepts[editingDept].assignmentTitleClassX = v;
+                                setSettings({ ...settings, departments: newDepts });
+                              }}
+                            />
+                            <Input
+                              label="Judul Penugasan Kelas XI (IND)"
+                              placeholder="Kosongkan jika sama dengan default"
+                              value={settings.departments[editingDept].assignmentTitleClassXI || ''}
+                              onChange={(v) => {
+                                const newDepts = { ...settings.departments };
+                                newDepts[editingDept].assignmentTitleClassXI = v;
+                                setSettings({ ...settings, departments: newDepts });
+                              }}
                             />
                             <Input
                               label="Bidang Keahlian"
@@ -4021,7 +4052,7 @@ export default function Dashboard() {
 
                                      {!isLSPPreview && (
                                        <p className="mt-8 mb-3 leading-relaxed">
-                                         Telah mengikuti Uji Kompetensi Keahlian pada penugasan {department?.assignmentTitleId || '-'} dengan keterangan pada unit di bawah ini :
+                                         Telah mengikuti Uji Kompetensi Keahlian pada penugasan {getAssignmentTitleForClass(department, s.Kelas)} dengan keterangan pada unit di bawah ini :
                                        </p>
                                      )}
                                    </div>
