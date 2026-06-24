@@ -2614,7 +2614,9 @@ func renderSkillPassportPDF(pdf *gopdf.GoPdf, student map[string]interface{}, se
 		renderLSPSchemePDF(pdf, student, settings, pw, ph)
 		return
 	}
+	pageNo := 1
 	pdf.AddPage()
+	drawSkillPassportFooter(pdf, student, pw, ph, pageNo)
 
 	marginX := 62.0
 	currentY := 32.0
@@ -2751,7 +2753,10 @@ func renderSkillPassportPDF(pdf *gopdf.GoPdf, student map[string]interface{}, se
 
 	currentY += 14
 	competencies := resolveSkillPassportCompetencies(student, settings, jurusanName)
-	currentY = drawSkillPassportTable(pdf, competencies, marginX, currentY, pw, ph)
+	currentY = drawSkillPassportTable(pdf, competencies, marginX, currentY, pw, ph, func() {
+		pageNo++
+		drawSkillPassportFooter(pdf, student, pw, ph, pageNo)
+	})
 
 	closingLines := wrapText(pdf, "Demikian surat keterangan ini kami sampaikan untuk dipergunakan sebagaimana mestinya.", pw-(marginX*2), "Helvetica", 11.5)
 	closingTextHeight := float64(len(closingLines)) * 16
@@ -2759,6 +2764,8 @@ func renderSkillPassportPDF(pdf *gopdf.GoPdf, student map[string]interface{}, se
 	requiredSignatureArea := 22 + closingTextHeight + 4 + signatureBlockHeight
 	if currentY+requiredSignatureArea > ph-24 {
 		pdf.AddPage()
+		pageNo++
+		drawSkillPassportFooter(pdf, student, pw, ph, pageNo)
 		currentY = 46
 	}
 
@@ -2794,7 +2801,9 @@ func renderSkillPassportPDF(pdf *gopdf.GoPdf, student map[string]interface{}, se
 }
 
 func renderLSPSchemePDF(pdf *gopdf.GoPdf, student map[string]interface{}, settings CertSettings, pw, ph float64) {
+	pageNo := 1
 	pdf.AddPage()
+	drawSkillPassportFooter(pdf, student, pw, ph, pageNo)
 	marginX := 42.0
 	currentY := drawLSPLetterhead(pdf, settings, marginX, 30, pw)
 	pdf.SetLineWidth(2)
@@ -2870,9 +2879,14 @@ func renderLSPSchemePDF(pdf *gopdf.GoPdf, student map[string]interface{}, settin
 
 	competencies := resolveSkillPassportCompetencies(student, settings, jurusanName)
 	currentY += 12
-	currentY = drawSkillPassportTable(pdf, competencies, marginX, currentY, pw, ph)
+	currentY = drawSkillPassportTable(pdf, competencies, marginX, currentY, pw, ph, func() {
+		pageNo++
+		drawSkillPassportFooter(pdf, student, pw, ph, pageNo)
+	})
 	if currentY+285 > ph {
 		pdf.AddPage()
+		pageNo++
+		drawSkillPassportFooter(pdf, student, pw, ph, pageNo)
 		currentY = 46
 	}
 
@@ -2936,6 +2950,44 @@ func resolveLSPDepartmentIdentity(jurusanName string, settings CertSettings) (st
 		}
 	}
 	return expertiseField, programName, concentrationName, standardReference, schemeType, schemeName
+}
+
+func drawSkillPassportFooter(pdf *gopdf.GoPdf, student map[string]interface{}, pw, ph float64, pageNo int) {
+	name := strings.TrimSpace(valueFromStudent(student, "Nama Siswa"))
+	className := strings.TrimSpace(valueFromStudent(student, "Kelas"))
+	if name == "" {
+		name = "-"
+	}
+	if className == "" {
+		className = "-"
+	}
+
+	leftText := fmt.Sprintf("%s | %s", name, className)
+	rightText := fmt.Sprintf("Halaman %d", pageNo)
+	leftX := 30.0
+	rightMargin := 30.0
+	y := ph - 18
+	maxLeftWidth := pw - 170
+	fontSize := 7.5
+
+	for fontSize > 5.5 {
+		pdf.SetFont("Helvetica", "", fontSize)
+		if textWidth, _ := pdf.MeasureTextWidth(leftText); textWidth <= maxLeftWidth {
+			break
+		}
+		fontSize -= 0.5
+	}
+
+	pdf.SetTextColor(100, 100, 100)
+	pdf.SetFont("Helvetica", "", fontSize)
+	pdf.SetXY(leftX, y)
+	pdf.Text(leftText)
+
+	pdf.SetFont("Helvetica", "", 7.5)
+	rightWidth, _ := pdf.MeasureTextWidth(rightText)
+	pdf.SetXY(pw-rightMargin-rightWidth, y)
+	pdf.Text(rightText)
+	pdf.SetTextColor(0, 0, 0)
 }
 
 func drawLSPLetterhead(pdf *gopdf.GoPdf, settings CertSettings, marginX, currentY, pw float64) float64 {
@@ -3309,7 +3361,7 @@ func resolveSkillPassportCompetencies(student map[string]interface{}, settings C
 	return competencies
 }
 
-func drawSkillPassportTable(pdf *gopdf.GoPdf, competencies []map[string]string, marginX, y, pw, ph float64) float64 {
+func drawSkillPassportTable(pdf *gopdf.GoPdf, competencies []map[string]string, marginX, y, pw, ph float64, onNewPage func()) float64 {
 	tableX := marginX + 2
 	codeW := 92.0
 	infoW := 100.0
@@ -3364,6 +3416,9 @@ func drawSkillPassportTable(pdf *gopdf.GoPdf, competencies []map[string]string, 
 
 		if y+rowH > ph-36 {
 			pdf.AddPage()
+			if onNewPage != nil {
+				onNewPage()
+			}
 			y = 46
 			y = drawHeader(y)
 		}
