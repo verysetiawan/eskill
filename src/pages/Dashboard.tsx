@@ -4045,7 +4045,7 @@ export default function Dashboard() {
                                        </div>
                                        <div className={`flex flex-col items-center text-center ${isLSPPreview ? '-mt-5' : ''}`}>
                                          <QrCode size={68} strokeWidth={1.7} />
-                                         <p className="text-[7px] font-bold mt-1">Kode Sertifikat:</p>
+                                         <p className="text-[7px] font-bold mt-1">Kode Validasi:</p>
                                          <p className="text-[7px] font-bold break-all">{s['Nomor Seri'] || '-'}</p>
                                        </div>
                                      </div>

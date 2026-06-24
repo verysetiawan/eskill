@@ -2616,6 +2616,7 @@ func renderSkillPassportPDF(pdf *gopdf.GoPdf, student map[string]interface{}, se
 	}
 	pageNo := 1
 	pdf.AddPage()
+	drawCertificateBackground(pdf, settings, pw, ph)
 	drawSkillPassportFooter(pdf, student, pw, ph, pageNo)
 
 	marginX := 62.0
@@ -2725,7 +2726,7 @@ func renderSkillPassportPDF(pdf *gopdf.GoPdf, student map[string]interface{}, se
 				qrY := currentY - (rowGap * 5) - 18
 				pdf.ImageByHolder(qrHolder, qrX, qrY, &gopdf.Rect{W: qrSize, H: qrSize})
 				pdf.SetFont("Helvetica-Bold", "", 7.5)
-				caption := "Kode Sertifikat"
+				caption := "Kode Validasi"
 				captionWidth, _ := pdf.MeasureTextWidth(caption)
 				pdf.SetXY(qrX+(qrSize-captionWidth)/2, qrY+qrSize+4)
 				pdf.Text(caption)
@@ -2755,6 +2756,7 @@ func renderSkillPassportPDF(pdf *gopdf.GoPdf, student map[string]interface{}, se
 	competencies := resolveSkillPassportCompetencies(student, settings, jurusanName)
 	currentY = drawSkillPassportTable(pdf, competencies, marginX, currentY, pw, ph, func() {
 		pageNo++
+		drawCertificateBackground(pdf, settings, pw, ph)
 		drawSkillPassportFooter(pdf, student, pw, ph, pageNo)
 	})
 
@@ -2765,6 +2767,7 @@ func renderSkillPassportPDF(pdf *gopdf.GoPdf, student map[string]interface{}, se
 	if currentY+requiredSignatureArea > ph-24 {
 		pdf.AddPage()
 		pageNo++
+		drawCertificateBackground(pdf, settings, pw, ph)
 		drawSkillPassportFooter(pdf, student, pw, ph, pageNo)
 		currentY = 46
 	}
@@ -2803,6 +2806,7 @@ func renderSkillPassportPDF(pdf *gopdf.GoPdf, student map[string]interface{}, se
 func renderLSPSchemePDF(pdf *gopdf.GoPdf, student map[string]interface{}, settings CertSettings, pw, ph float64) {
 	pageNo := 1
 	pdf.AddPage()
+	drawCertificateBackground(pdf, settings, pw, ph)
 	drawSkillPassportFooter(pdf, student, pw, ph, pageNo)
 	marginX := 42.0
 	currentY := drawLSPLetterhead(pdf, settings, marginX, 30, pw)
@@ -2871,7 +2875,7 @@ func renderLSPSchemePDF(pdf *gopdf.GoPdf, student map[string]interface{}, settin
 			if qrHolder, err := gopdf.ImageHolderByBytes(qrBytes); err == nil {
 				qrY := currentY - (rowGap * 5) - 18
 				pdf.ImageByHolder(qrHolder, qrX, qrY, &gopdf.Rect{W: qrSize, H: qrSize})
-				drawTextCenteredInArea(pdf, "Kode Sertifikat", "Helvetica-Bold", 7.5, qrY+70, qrX-8, qrSize+16, 0, 0, 0)
+				drawTextCenteredInArea(pdf, "Kode Validasi", "Helvetica-Bold", 7.5, qrY+70, qrX-8, qrSize+16, 0, 0, 0)
 				drawTextCenteredInArea(pdf, serialStr, "Helvetica", 7, qrY+81, qrX-8, qrSize+16, 0, 0, 0)
 			}
 		}
@@ -2881,11 +2885,13 @@ func renderLSPSchemePDF(pdf *gopdf.GoPdf, student map[string]interface{}, settin
 	currentY += 12
 	currentY = drawSkillPassportTable(pdf, competencies, marginX, currentY, pw, ph, func() {
 		pageNo++
+		drawCertificateBackground(pdf, settings, pw, ph)
 		drawSkillPassportFooter(pdf, student, pw, ph, pageNo)
 	})
 	if currentY+285 > ph {
 		pdf.AddPage()
 		pageNo++
+		drawCertificateBackground(pdf, settings, pw, ph)
 		drawSkillPassportFooter(pdf, student, pw, ph, pageNo)
 		currentY = 46
 	}
@@ -2952,6 +2958,22 @@ func resolveLSPDepartmentIdentity(jurusanName string, settings CertSettings) (st
 	return expertiseField, programName, concentrationName, standardReference, schemeType, schemeName
 }
 
+func drawCertificateBackground(pdf *gopdf.GoPdf, settings CertSettings, pw, ph float64) {
+	if settings.Layout == nil {
+		return
+	}
+	backgroundImage, _ := settings.Layout["backgroundImage"].(string)
+	backgroundImage = strings.TrimSpace(backgroundImage)
+	if backgroundImage == "" {
+		return
+	}
+	holder, err := resolveImageHolder(backgroundImage)
+	if err != nil {
+		return
+	}
+	pdf.ImageByHolder(holder, 0, 0, &gopdf.Rect{W: pw, H: ph})
+}
+
 func drawSkillPassportFooter(pdf *gopdf.GoPdf, student map[string]interface{}, pw, ph float64, pageNo int) {
 	name := strings.TrimSpace(valueFromStudent(student, "Nama Siswa"))
 	className := strings.TrimSpace(valueFromStudent(student, "Kelas"))
@@ -2961,8 +2983,12 @@ func drawSkillPassportFooter(pdf *gopdf.GoPdf, student map[string]interface{}, p
 	if className == "" {
 		className = "-"
 	}
+	validationCode := strings.TrimSpace(valueFromStudent(student, "Nomor Seri"))
+	if validationCode == "" {
+		validationCode = "-"
+	}
 
-	leftText := fmt.Sprintf("%s | %s", name, className)
+	leftText := fmt.Sprintf("%s | %s | Kode Validasi: %s", name, className, validationCode)
 	rightText := fmt.Sprintf("Halaman %d", pageNo)
 	leftX := 30.0
 	rightMargin := 30.0
